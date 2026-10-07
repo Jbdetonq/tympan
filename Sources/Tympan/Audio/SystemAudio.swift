@@ -23,7 +23,7 @@ enum SystemAudio {
         var name: Unmanaged<CFString>?
         var size = UInt32(MemoryLayout<Unmanaged<CFString>?>.size)
         let status = AudioObjectGetPropertyData(device, &address, 0, nil, &size, &name)
-        guard status == noErr, let value = name?.takeRetainedValue() else { return "Sortie audio" }
+        guard status == noErr, let value = name?.takeRetainedValue() else { return String(localized: "Sortie audio") }
         return value as String
     }
 

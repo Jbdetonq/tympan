@@ -48,8 +48,8 @@ struct NewTestPage: View {
                 kidHeader
             } else {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(verbatim: "Nouveau test · \(user.name)").font(.system(size: 28, weight: .semibold))
-                    Text(verbatim: "Durée estimée : environ \(effectiveLength.estimatedMinutes(ears: earMode.ears.count)) min")
+                    Text("Nouveau test · \(user.name)").font(.system(size: 28, weight: .semibold))
+                    Text("Durée estimée : environ \(effectiveLength.estimatedMinutes(ears: earMode.ears.count)) min")
                         .font(.system(size: 14))
                         .foregroundStyle(Theme.muted)
                 }
@@ -82,7 +82,7 @@ struct NewTestPage: View {
                     HStack(spacing: 12) {
                         Picker("Profil casque", selection: $headphoneID) {
                             ForEach(store.data.headphones) { h in
-                                Text(verbatim: "\(h.name) · volume \(Int(h.volume * 100)) %").tag(Optional(h.id))
+                                Text("\(h.name) · volume \(Int(h.volume * 100)) %").tag(Optional(h.id))
                             }
                         }
                         .labelsHidden()
@@ -175,8 +175,8 @@ struct NewTestPage: View {
         // Jamais monter le volume si un autre son joue : il sortirait fort lui aussi.
         if let others = otherAudio(on: d) {
             previewError = others.isEmpty
-                ? "Un autre son joue sur le Mac. Coupe-le avant le bip de réglage."
-                : "Un autre son joue sur le Mac (\(others.joined(separator: ", "))). Coupe-le avant le bip de réglage."
+                ? String(localized: "Un autre son joue sur le Mac. Coupe-le avant le bip de réglage.")
+                : String(localized: "Un autre son joue sur le Mac (\(others.joined(separator: ", "))). Coupe-le avant le bip de réglage.")
             return
         }
         if originalVolume == nil { originalVolume = SystemAudio.volume(of: d) }
@@ -186,7 +186,7 @@ struct NewTestPage: View {
             try preview.startEngine()
             previewError = nil
         } catch {
-            previewError = "Audio indisponible : \(error.localizedDescription)"
+            previewError = String(localized: "Audio indisponible : \(error.localizedDescription)")
             return
         }
         previewTask?.cancel()
@@ -287,7 +287,7 @@ struct NewTestPage: View {
                 Slider(value: $newVolume, in: 0.1...1.0, step: 0.05, onEditingChanged: { editing in
                     if !editing { playPreview(volume: Float(newVolume)) }
                 })
-                Text(verbatim: "\(Int(newVolume * 100)) %")
+                Text("\(Int(newVolume * 100)) %")
                     .font(Theme.mono(13))
                     .frame(width: 48, alignment: .trailing)
                 Button {
@@ -336,7 +336,7 @@ struct NewTestPage: View {
         } else if !deviceName.isEmpty {
             HStack(spacing: 8) {
                 Circle().fill(Theme.ok).frame(width: 8, height: 8)
-                Text(verbatim: "Sortie active : \(deviceName)")
+                Text("Sortie active : \(deviceName)")
                     .foregroundStyle(Theme.secondary)
             }
             .font(.system(size: 13))

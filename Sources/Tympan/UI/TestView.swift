@@ -14,7 +14,7 @@ struct TestView: View {
         VStack(alignment: .leading, spacing: 22) {
             header
             if let error = runner.errorMessage {
-                InfoBanner(text: LocalizedStringKey(error))
+                InfoBanner(verbatim: error)
                 Spacer()
             } else if runner.phase == .finished, let session = runner.result {
                 TestSummaryView(session: session) { note in
@@ -93,7 +93,7 @@ struct TestView: View {
     private var header: some View {
         HStack(spacing: 14) {
             VStack(alignment: .leading, spacing: 3) {
-                Text(verbatim: "Test en cours · \(userName)").font(.system(size: 24, weight: .semibold))
+                Text("Test en cours · \(userName)").font(.system(size: 24, weight: .semibold))
                 Text("Appuie dès que tu entends un bip, même très faible.")
                     .font(.system(size: 14))
                     .foregroundStyle(Theme.muted)
@@ -123,13 +123,13 @@ struct TestView: View {
         HStack(spacing: 0) {
             step(title: "Casque", state: state(for: .headphones)) {
                 Text(verbatim: runner.config.headphone.name).font(.system(size: 14, weight: .semibold)).lineLimit(1)
-                Text(verbatim: "Volume verrouillé \(Int(runner.config.headphone.volume * 100)) %")
+                Text("Volume verrouillé \(Int(runner.config.headphone.volume * 100)) %")
                     .font(Theme.mono(11)).foregroundStyle(Theme.muted)
             }
             arrow(active: runner.phase == .ambient)
             step(title: "Bruit ambiant", state: state(for: .ambient)) {
                 NoiseMeterBar(level: runner.ambientLevel, threshold: TestRunner.noisyThreshold)
-                Text(verbatim: noiseCaption).font(Theme.mono(11)).foregroundStyle(Theme.muted)
+                Text(noiseCaption).font(Theme.mono(11)).foregroundStyle(Theme.muted)
             }
             arrow(active: runner.phase == .measuring)
             step(title: "Mesure", state: state(for: .measuring)) {
@@ -147,10 +147,10 @@ struct TestView: View {
         .fixedSize(horizontal: false, vertical: true)
     }
 
-    private var noiseCaption: String {
+    private var noiseCaption: LocalizedStringKey {
         if runner.micUnavailable { return "Micro indisponible" }
-        guard let l = runner.ambientLevel else { return runner.phase == .ambient ? "Écoute de la pièce..." : "" }
-        return "\(runner.noisy ? "Bruyant" : "Calme") · \(Int(l)) dB rel."
+        guard let l = runner.ambientLevel else { return runner.phase == .ambient ? "Écoute de la pièce..." : " " }
+        return runner.noisy ? "Bruyant · \(Int(l)) dB rel." : "Calme · \(Int(l)) dB rel."
     }
 
     private func step<Content: View>(title: LocalizedStringKey, state: StepState,
@@ -224,9 +224,9 @@ struct TestView: View {
                             .font(Theme.mono(30, .semibold))
                         Text("ignorés").foregroundStyle(runner.catchFalseAlarms == 0 ? Theme.ok : Theme.accent)
                     }
-                    Text(verbatim: runner.spuriousPresses == 0
-                         ? "Aucun appui dans le vide"
-                         : "\(runner.spuriousPresses) appui(s) sans bip")
+                    Text(runner.spuriousPresses == 0
+                         ? LocalizedStringKey("Aucun appui dans le vide")
+                         : LocalizedStringKey("\(runner.spuriousPresses) appui(s) sans bip"))
                         .font(.system(size: 13)).foregroundStyle(Theme.muted)
                 }
             }
@@ -257,7 +257,7 @@ struct TestView: View {
         } label: {
             HStack(spacing: 20) {
                 Text("J'entends").font(.system(size: 30, weight: .semibold))
-                Keycap(text: "ESPACE")
+                Keycap(text: String(localized: "ESPACE"))
             }
             .frame(maxWidth: .infinity, minHeight: 104)
         }
@@ -407,11 +407,11 @@ struct TestSummaryView: View {
         .frame(maxHeight: .infinity, alignment: .top)
     }
 
-    private func summaryLine(ok: Bool, text: String) -> some View {
+    private func summaryLine(ok: Bool, text: LocalizedStringKey) -> some View {
         HStack(spacing: 10) {
             Image(systemName: ok ? "checkmark.circle" : "exclamationmark.triangle")
                 .foregroundStyle(ok ? Theme.ok : Theme.accent)
-            Text(verbatim: text).foregroundStyle(Theme.secondary)
+            Text(text).foregroundStyle(Theme.secondary)
         }
         .font(.system(size: 14))
     }

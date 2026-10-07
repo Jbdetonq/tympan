@@ -415,9 +415,9 @@ struct SidebarView: View {
         guard panel.runModal() == .OK, let url = panel.url else { return }
         do {
             try store.export(to: url)
-            message = "Export terminé."
+            message = String(localized: "Export terminé.")
         } catch {
-            message = "Échec de l'export : \(error.localizedDescription)"
+            message = String(localized: "Échec de l'export : \(error.localizedDescription)")
         }
     }
 
@@ -428,9 +428,9 @@ struct SidebarView: View {
         guard panel.runModal() == .OK, let url = panel.url else { return }
         do {
             let n = try store.importFile(from: url)
-            message = "\(n) session(s) importée(s)."
+            message = String(localized: "\(n) session(s) importée(s).")
         } catch {
-            message = "Fichier non reconnu."
+            message = String(localized: "Fichier non reconnu.")
         }
     }
 }

@@ -88,9 +88,9 @@ struct UserDetailView: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(verbatim: user.name).font(.system(size: 28, weight: .semibold))
                 HStack(spacing: 6) {
-                    Text(verbatim: "Né(e) en \(String(user.birthYear)) · \(user.sessions.count) session(s)")
+                    Text("Né(e) en \(String(user.birthYear))") + Text(verbatim: " · ") + Text("\(user.sessions.count) session(s)")
                     if let h = store.headphone(displayed?.headphoneID) {
-                        Text(verbatim: "· \(h.name) · vol \(Int(h.volume * 100)) %")
+                        Text("· \(h.name) · vol \(Int(h.volume * 100)) %")
                             .font(Theme.mono(13))
                             .foregroundStyle(Theme.secondary)
                     }
@@ -148,7 +148,7 @@ struct UserDetailView: View {
                     .font(.system(size: 36))
                     .foregroundStyle(Theme.accent)
                 Text("Pas encore de test").font(.system(size: 20, weight: .semibold))
-                Text("Branche ton casque, installe-toi au calme et lance un premier test (environ 8 minutes).")
+                Text("Branche ton casque, installe-toi au calme et lance un premier test (environ 7 minutes).")
                     .foregroundStyle(Theme.muted)
                     .multilineTextAlignment(.center)
                 Button("Lancer le premier test") { onNewTest(.standard) }
@@ -165,22 +165,26 @@ struct DegradationBanner: View {
     var onVerify: () -> Void
 
     private var title: String {
-        let ear = degradation.ear == .right ? "oreille droite" : "oreille gauche"
-        return degradation.confirmed
-            ? "Baisse à signaler, \(ear). "
-            : "Écart à vérifier, \(ear). "
+        switch (degradation.confirmed, degradation.ear) {
+        case (true, .right): return String(localized: "Baisse à signaler, oreille droite.") + " "
+        case (true, .left): return String(localized: "Baisse à signaler, oreille gauche.") + " "
+        case (false, .right): return String(localized: "Écart à vérifier, oreille droite.") + " "
+        case (false, .left): return String(localized: "Écart à vérifier, oreille gauche.") + " "
+        }
     }
 
     private var detail: String {
-        let parts = degradation.items.map {
-            $0.noResponse
-                ? "\(Analysis.frequencyLabel($0.frequency))Hz rien entendu"
-                : "\(Analysis.frequencyLabel($0.frequency))Hz +\($0.delta) dB"
+        let parts = degradation.items.map { item -> String in
+            let f = Analysis.frequencyLabel(item.frequency)
+            return item.noResponse ? String(localized: "\(f)Hz rien entendu") : "\(f)Hz +\(item.delta) dB"
         }
-        var text = parts.joined(separator: ", ")
-        if let referenceDate { text += " par rapport à la référence (\(Format.long.string(from: referenceDate)))" }
-        text += "."
-        if degradation.confirmed { text += " Tympan ne pose pas de diagnostic : montre ce résultat à ton médecin ou à un ORL." }
+        let list = parts.joined(separator: ", ")
+        var text = referenceDate.map {
+            String(localized: "\(list) par rapport à la référence (\(Format.long.string(from: $0))).")
+        } ?? "\(list)."
+        if degradation.confirmed {
+            text += " " + String(localized: "Tympan ne pose pas de diagnostic : montre ce résultat à ton médecin ou à un ORL.")
+        }
         return text
     }
 
@@ -206,13 +210,17 @@ struct DegradationBanner: View {
 }
 
 struct InfoBanner: View {
-    let text: LocalizedStringKey
+    let text: Text
+
+    init(text: LocalizedStringKey) { self.text = Text(text) }
+    /// Texte déjà traduit (message d'erreur).
+    init(verbatim: String) { self.text = Text(verbatim: verbatim) }
 
     var body: some View {
         HStack(spacing: 12) {
             Image(systemName: "speaker.wave.2")
                 .foregroundStyle(Theme.accent)
-            Text(text).font(.system(size: 14)).foregroundStyle(Theme.secondary)
+            text.font(.system(size: 14)).foregroundStyle(Theme.secondary)
             Spacer()
         }
         .padding(.horizontal, 16)
@@ -265,7 +273,7 @@ struct EvolutionPanel: View {
                     Text(verbatim: "dB").foregroundStyle(Theme.muted)
                     Spacer()
                     if let d = deltaFromReference {
-                        Text(verbatim: "\(d >= 0 ? "+" : "")\(d) depuis réf.")
+                        Text("\(d >= 0 ? "+" : "")\(d) depuis réf.")
                             .font(Theme.mono(13))
                             .foregroundStyle(d >= 10 ? Theme.accent : Theme.muted)
                     }
@@ -390,7 +398,7 @@ struct SessionsPanel: View {
         } else if s.noisy {
             Text("Bruyant, exclue").font(.system(size: 12)).foregroundStyle(Theme.accent)
         } else if let r = s.reliability {
-            Text(verbatim: "Fiable \(Int((r * 100).rounded())) %")
+            Text("Fiable \(Int((r * 100).rounded())) %")
                 .font(.system(size: 12))
                 .foregroundStyle(r >= 0.8 ? Theme.ok : Theme.accent)
         } else {
@@ -401,10 +409,7 @@ struct SessionsPanel: View {
 
 // MARK: Scores aux jeux
 
-/// « 1re place », « 2e place »…
-private func placeText(_ index: Int) -> LocalizedStringKey {
-    index == 0 ? "1re place" : "\(index + 1)e place"
-}
+private func placeText(_ index: Int) -> String { Format.place(index) }
 
 /// Carte cliquable d'un jeu dans la fiche (ouvre sa page d'accueil).
 private struct GameScoreCard<Icon: View, Content: View>: View {

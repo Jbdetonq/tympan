@@ -71,7 +71,7 @@ struct GameHeadphoneField: View {
             } else {
                 Picker("Profil casque", selection: $headphoneID) {
                     ForEach(store.data.headphones) { h in
-                        Text(verbatim: "\(h.name) · volume \(Int(h.volume * 100)) %").tag(Optional(h.id))
+                        Text("\(h.name) · volume \(Int(h.volume * 100)) %").tag(Optional(h.id))
                     }
                 }
                 .labelsHidden()
@@ -107,7 +107,7 @@ struct GameHeadphoneField: View {
         } else if !deviceName.isEmpty {
             HStack(spacing: 8) {
                 Circle().fill(Theme.ok).frame(width: 8, height: 8)
-                Text(verbatim: "Sortie active : \(deviceName)")
+                Text("Sortie active : \(deviceName)")
                     .foregroundStyle(Theme.secondary)
             }
             .font(.system(size: 13))

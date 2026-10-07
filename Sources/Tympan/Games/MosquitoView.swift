@@ -132,7 +132,7 @@ struct MosquitoView: View {
     private var stage: some View {
         VStack(alignment: .leading, spacing: 26) {
             if let error = game.errorMessage {
-                InfoBanner(text: LocalizedStringKey(error))
+                InfoBanner(verbatim: error)
                 Spacer()
             } else if game.phase == .over {
                 endScreen

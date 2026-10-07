@@ -181,6 +181,17 @@ enum Format {
             : value.formatted(style.precision(.fractionLength(digits)))
     }
 
+    /// Place au classement (index 0 = premier) : « 1re place », « 2e place » ; « 1st place », « 2nd place ».
+    static func place(_ index: Int) -> String {
+        let n = index + 1
+        if AppLocale.isFrench { return n == 1 ? "1re place" : "\(n)e place" }
+        let f = NumberFormatter()
+        f.locale = AppLocale.current
+        f.numberStyle = .ordinal
+        let ordinal = f.string(from: NSNumber(value: n)) ?? "\(n)"
+        return String(localized: "\(ordinal) place")
+    }
+
     static func minutes(_ seconds: TimeInterval) -> String {
         let s = max(0, Int(seconds.rounded()))
         return String(format: "%d:%02d", s / 60, s % 60)

@@ -166,7 +166,7 @@ final class TestRunner {
         do {
             try tone.startEngine()
         } catch {
-            errorMessage = "Impossible de démarrer l'audio : \(error.localizedDescription)"
+            errorMessage = String(localized: "Impossible de démarrer l'audio : \(error.localizedDescription)")
             restoreVolume()
             return
         }

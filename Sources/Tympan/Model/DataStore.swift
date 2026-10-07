@@ -41,7 +41,7 @@ final class DataStore {
             let backup = fileURL.deletingPathExtension().appendingPathExtension("illisible.json")
             try? FileManager.default.removeItem(at: backup)
             try? FileManager.default.copyItem(at: fileURL, to: backup)
-            lastError = "Fichier de données illisible : Tympan démarre vide. L'original est gardé dans \(backup.path)."
+            lastError = String(localized: "Fichier de données illisible : Tympan démarre vide. L'original est gardé dans \(backup.path).")
         }
     }
 
@@ -49,7 +49,7 @@ final class DataStore {
         do {
             try Self.makeEncoder().encode(data).write(to: fileURL, options: .atomic)
         } catch {
-            lastError = "Échec de l'enregistrement des données : \(error.localizedDescription)"
+            lastError = String(localized: "Échec de l'enregistrement des données : \(error.localizedDescription)")
         }
     }
 

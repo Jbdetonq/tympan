@@ -26,7 +26,7 @@ struct KidTestView: View {
         VStack(spacing: 20) {
             header
             if let error = runner.errorMessage {
-                InfoBanner(text: LocalizedStringKey(error))
+                InfoBanner(verbatim: error)
                 Spacer()
             } else {
                 banners
