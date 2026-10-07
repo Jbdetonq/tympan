@@ -217,18 +217,23 @@ final class VolumeLock {
 
     private static var engaged = NSHashTable<VolumeLock>.weakObjects()
     private static var escMonitor: Any?
+    /// Dernier appui sur Échap pendant un verrou.
+    private static var lastEsc: Date?
 
     private static func register(_ lock: VolumeLock) {
         engaged.add(lock)
         guard escMonitor == nil else { return }
         escMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
             guard event.keyCode == 53 else { return event } // Échap
-            // Son déjà coupé : Échap est gardé quand même, pour qu'un second appui
-            // n'ouvre pas « Quitter » (on reprend ou quitte avec les boutons).
+            // Son déjà coupé : les appuis en rafale (moins d'une seconde après le précédent)
+            // sont ignorés, pour qu'un réflexe n'ouvre pas « Quitter ». Après, Échap passe.
             let handled = MainActor.assumeIsolated { () -> Bool in
-                let locks = VolumeLock.engaged.allObjects
-                locks.filter { !$0.emergency }.forEach { $0.emergencyStop() }
-                return !locks.isEmpty
+                let now = Date()
+                let burst = VolumeLock.lastEsc.map { now.timeIntervalSince($0) < 1 } ?? false
+                VolumeLock.lastEsc = now
+                let active = VolumeLock.engaged.allObjects.filter { !$0.emergency }
+                active.forEach { $0.emergencyStop() }
+                return !active.isEmpty || (burst && !VolumeLock.engaged.allObjects.isEmpty)
             }
             return handled ? nil : event
         }
