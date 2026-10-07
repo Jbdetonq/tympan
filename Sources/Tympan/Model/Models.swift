@@ -155,6 +155,11 @@ struct TestSession: Codable, Identifiable, Hashable {
     /// Les anciennes sessions sans format sont traitées comme des tests Moyens.
     var format: TestLength { length ?? .standard }
 
+    /// Seuil d'une fréquence, « pas de réponse » compris.
+    func threshold(_ ear: Ear, _ frequency: Int) -> Threshold? {
+        thresholds.first { $0.ear == ear && $0.frequency == frequency }
+    }
+
     func level(_ ear: Ear, _ frequency: Int) -> Int? {
         thresholds.first { $0.ear == ear && $0.frequency == frequency && !$0.noResponse }?.level
     }

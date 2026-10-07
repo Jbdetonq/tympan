@@ -22,24 +22,42 @@ enum Analysis {
 
     struct Degradation: Identifiable {
         let ear: Ear
-        let items: [(frequency: Int, delta: Int)]
+        /// `noResponse` : rien entendu au niveau maximum (l'écart est alors un minimum).
+        let items: [(frequency: Int, delta: Int, noResponse: Bool)]
         /// Vrai : perte confirmée (Moyen ou Complet). Faux : écart à vérifier par un test plus poussé.
         let confirmed: Bool
         var id: String { ear.rawValue }
     }
 
-    /// Compare une session à la référence, sur les fréquences mesurées dans les deux.
+    /// Écart d'une fréquence entre deux sessions (positif = moins bien), « pas de réponse » compris.
+    /// Rien entendu au maximum vaut au moins le niveau maximum : l'écart est un minimum.
+    /// Une référence sans réponse ne permet pas de voir une baisse.
+    static func delta(latest l: Threshold, reference r: Threshold) -> Int {
+        switch (l.noResponse, r.noResponse) {
+        case (false, false): return l.level - r.level
+        case (true, true): return 0
+        case (true, false): return max(0, l.level - r.level)
+        case (false, true): return min(0, l.level - r.level)
+        }
+    }
+
+    /// Compare une session à la référence, sur les fréquences testées dans les deux.
+    /// Une fréquence passée à « rien entendu » compte comme une baisse.
     /// - Confirmée : test Moyen ou Complet, +10 dB sur 2 fréquences voisines.
-    /// - À vérifier : +15 dB sur une fréquence, ou +10 dB sur 2 voisines vu par un test Rapide.
+    /// - À vérifier : +15 dB ou plus rien entendu sur une fréquence, ou +10 dB sur 2 voisines vu par un test Rapide.
     static func degradations(latest: TestSession, reference: TestSession) -> [Degradation] {
         guard latest.id != reference.id,
               latest.headphoneID == reference.headphoneID,
               !latest.noisy else { return [] }
         var result: [Degradation] = []
         for ear in Ear.allCases {
-            let common = allFrequencies.filter { latest.level(ear, $0) != nil && reference.level(ear, $0) != nil }
-            guard !common.isEmpty else { continue }
-            let deltas = common.map { (latest.level(ear, $0) ?? 0) - (reference.level(ear, $0) ?? 0) }
+            let rows: [(frequency: Int, latest: Threshold, reference: Threshold)] = allFrequencies.compactMap { f in
+                guard let l = latest.threshold(ear, f), let r = reference.threshold(ear, f) else { return nil }
+                return (f, l, r)
+            }
+            guard !rows.isEmpty else { continue }
+            let common = rows.map(\.frequency)
+            let deltas = rows.map { delta(latest: $0.latest, reference: $0.reference) }
             var pairs = Set<Int>()
             if common.count >= 2 {
                 for i in 0..<(common.count - 1) where deltas[i] >= 10 && deltas[i + 1] >= 10 {
@@ -47,11 +65,16 @@ enum Analysis {
                     pairs.insert(i + 1)
                 }
             }
-            let singles = Set(deltas.indices.filter { deltas[$0] >= 15 })
+            // Une fréquence entendue dans la référence et plus du tout aujourd'hui est toujours signalée.
+            let singles = Set(deltas.indices.filter {
+                deltas[$0] >= 15 || (rows[$0].latest.noResponse && !rows[$0].reference.noResponse)
+            })
             let confirmed = latest.format.canConfirm && !pairs.isEmpty
             let flagged = confirmed ? pairs : pairs.union(singles)
             if !flagged.isEmpty {
-                let items = flagged.sorted().map { (frequency: common[$0], delta: deltas[$0]) }
+                let items = flagged.sorted().map {
+                    (frequency: common[$0], delta: deltas[$0], noResponse: rows[$0].latest.noResponse)
+                }
                 result.append(Degradation(ear: ear, items: items, confirmed: confirmed))
             }
         }

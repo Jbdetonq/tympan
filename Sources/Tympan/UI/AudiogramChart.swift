@@ -99,6 +99,8 @@ struct AudiogramChart: View {
 /// Légende de l'audiogramme.
 struct AudiogramLegend: View {
     var showReference = true
+    /// Noir sur le PDF (fond blanc).
+    var textColor: Color = Theme.secondary
 
     var body: some View {
         HStack(spacing: 16) {
@@ -113,6 +115,6 @@ struct AudiogramLegend: View {
             }
         }
         .font(.system(size: 12))
-        .foregroundStyle(Theme.secondary)
+        .foregroundStyle(textColor)
     }
 }

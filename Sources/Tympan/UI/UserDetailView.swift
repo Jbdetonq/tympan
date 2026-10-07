@@ -172,7 +172,11 @@ struct DegradationBanner: View {
     }
 
     private var detail: String {
-        let parts = degradation.items.map { "\(Analysis.frequencyLabel($0.frequency))Hz +\($0.delta) dB" }
+        let parts = degradation.items.map {
+            $0.noResponse
+                ? "\(Analysis.frequencyLabel($0.frequency))Hz rien entendu"
+                : "\(Analysis.frequencyLabel($0.frequency))Hz +\($0.delta) dB"
+        }
         var text = parts.joined(separator: ", ")
         if let referenceDate { text += " par rapport à la référence (\(Format.long.string(from: referenceDate)))" }
         text += "."
@@ -319,6 +323,7 @@ struct SessionsPanel: View {
     let user: UserProfile
     let selectedID: UUID?
     var onSelect: (UUID) -> Void
+    @State private var sessionToDelete: TestSession?
 
     var body: some View {
         Panel {
@@ -334,6 +339,14 @@ struct SessionsPanel: View {
             }
         }
         .frame(maxHeight: .infinity)
+        .confirmationDialog("Supprimer cette session ? Elle disparaît de l'historique.",
+                            isPresented: Binding(get: { sessionToDelete != nil },
+                                                 set: { if !$0 { sessionToDelete = nil } }),
+                            presenting: sessionToDelete) { s in
+            Button("Supprimer la session du \(Format.long.string(from: s.date))", role: .destructive) {
+                store.deleteSession(s.id, of: user.id)
+            }
+        }
     }
 
     private func row(_ s: TestSession) -> some View {
@@ -366,7 +379,7 @@ struct SessionsPanel: View {
         .buttonStyle(.plain)
         .contextMenu {
             Button("Définir comme référence") { store.setReference(s.id, for: user.id) }
-            Button("Supprimer la session", role: .destructive) { store.deleteSession(s.id, of: user.id) }
+            Button("Supprimer la session…", role: .destructive) { sessionToDelete = s }
         }
     }
 

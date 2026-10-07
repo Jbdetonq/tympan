@@ -43,14 +43,19 @@ private struct ReportPage: View {
             Text(verbatim: "Audiogramme · \(user.name)").font(.system(size: 24, weight: .semibold))
             Text(verbatim: "Né(e) en \(String(user.birthYear)) · casque : \(headphone?.name ?? "?") (volume \(Int((headphone?.volume ?? 0) * 100)) %)")
                 .font(.system(size: 12)).foregroundStyle(.gray)
+            Text(verbatim: formatLine)
+                .font(.system(size: 12)).foregroundStyle(.gray)
 
             AudiogramChart(session: session, reference: reference,
                            plotBackground: .white, gridColor: Color(white: 0.78), gridWidth: 0.75)
                 .frame(height: 360)
-            AudiogramLegend(showReference: reference != nil)
-                .foregroundStyle(.black)
+            AudiogramLegend(showReference: reference != nil, textColor: .black)
 
             table
+            if hasNoResponse {
+                Text(verbatim: "« > \(session.format.maxLevel) » : rien entendu, même au niveau maximum de l'app. « - » : fréquence non testée.")
+                    .font(.system(size: 11)).foregroundStyle(.gray)
+            }
             if let note = session.note {
                 Text(verbatim: "Commentaire : \(note)")
                     .font(.system(size: 12))
@@ -69,6 +74,35 @@ private struct ReportPage: View {
         .foregroundStyle(.black)
     }
 
+    /// « Test Moyen », « Mode enfant (plafond 70 dB) ».
+    private var formatLine: String {
+        let ears: String
+        switch session.earMode {
+        case .both: ears = "deux oreilles"
+        case .right: ears = "oreille droite seule"
+        case .left: ears = "oreille gauche seule"
+        }
+        if session.kidMode || session.format == .kid {
+            return "Mode enfant (plafond \(session.format.maxLevel) dB) · \(ears)"
+        }
+        let name: String
+        switch session.format {
+        case .quick: name = "Rapide"
+        case .standard: name = "Moyen"
+        case .full: name = "Complet"
+        case .kid: name = "Enfant"
+        }
+        return "Test \(name) · \(ears)"
+    }
+
+    private var hasNoResponse: Bool { session.thresholds.contains(where: \.noResponse) }
+
+    /// Seuil en dB, « > 90 » si rien entendu au maximum, « - » si non testé.
+    private func cell(_ ear: Ear, _ f: Int) -> String {
+        guard let t = session.threshold(ear, f) else { return "-" }
+        return t.noResponse ? "> \(session.format.maxLevel)" : "\(t.level)"
+    }
+
     private var measured: [Int] {
         Array(Set(session.thresholds.map(\.frequency))).sorted()
     }
@@ -81,11 +115,11 @@ private struct ReportPage: View {
                     Text(verbatim: Analysis.frequencyLabel(f)).foregroundStyle(.gray)
                 }
             }
-            ForEach(Ear.allCases) { ear in
+            ForEach(session.earMode.ears) { ear in
                 GridRow {
                     Text(ear.label).foregroundStyle(Theme.color(for: ear))
                     ForEach(measured, id: \.self) { f in
-                        Text(verbatim: session.level(ear, f).map { "\($0)" } ?? "-")
+                        Text(verbatim: cell(ear, f))
                     }
                 }
             }

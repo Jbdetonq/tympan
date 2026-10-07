@@ -41,7 +41,7 @@ final class DataStore {
             let backup = fileURL.deletingPathExtension().appendingPathExtension("illisible.json")
             try? FileManager.default.removeItem(at: backup)
             try? FileManager.default.copyItem(at: fileURL, to: backup)
-            lastError = "Données illisibles, copie de sécurité : \(backup.lastPathComponent)"
+            lastError = "Fichier de données illisible : Tympan démarre vide. L'original est gardé dans \(backup.path)."
         }
     }
 
@@ -49,7 +49,7 @@ final class DataStore {
         do {
             try Self.makeEncoder().encode(data).write(to: fileURL, options: .atomic)
         } catch {
-            lastError = error.localizedDescription
+            lastError = "Échec de l'enregistrement des données : \(error.localizedDescription)"
         }
     }
 
@@ -94,10 +94,18 @@ final class DataStore {
     func add(_ session: TestSession, to userID: UUID) {
         guard let i = data.users.firstIndex(where: { $0.id == userID }) else { return }
         data.users[i].sessions.append(session)
-        if data.users[i].reference == nil && !session.noisy && session.format.canConfirm {
-            data.users[i].referenceSessionID = session.id
-        }
+        ensureReference(userIndex: i)
         save()
+    }
+
+    /// Référence automatique quand il n'y en a pas (ou plus) : le plus ancien test
+    /// Moyen ou Complet fait au calme. Jamais un Rapide ni un test enfant.
+    private func ensureReference(userIndex i: Int) {
+        guard data.users[i].reference == nil else { return }
+        data.users[i].referenceSessionID = data.users[i].sessions
+            .filter { !$0.noisy && $0.format.canConfirm }
+            .min { $0.date < $1.date }?
+            .id
     }
 
     func setReference(_ sessionID: UUID, for userID: UUID) {
@@ -120,6 +128,7 @@ final class DataStore {
         data.users[i].sessions.removeAll { $0.id == sessionID }
         if data.users[i].referenceSessionID == sessionID {
             data.users[i].referenceSessionID = nil
+            ensureReference(userIndex: i)
         }
         save()
     }
@@ -234,9 +243,10 @@ final class DataStore {
                         added += 1
                     }
                 }
-                if data.users[i].referenceSessionID == nil {
+                if data.users[i].reference == nil {
                     data.users[i].referenceSessionID = u.referenceSessionID
                 }
+                ensureReference(userIndex: i)
             } else {
                 data.users.append(u)
                 added += u.sessions.count

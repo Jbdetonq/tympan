@@ -292,6 +292,23 @@ struct SidebarView: View {
 
             // Pied : toujours visible en bas.
             VStack(alignment: .leading, spacing: 6) {
+                if let error = store.lastError {
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack(alignment: .top, spacing: 6) {
+                            Image(systemName: "exclamationmark.triangle")
+                            Text(verbatim: error)
+                                .fixedSize(horizontal: false, vertical: true)
+                                .textSelection(.enabled)
+                        }
+                        Button("OK") { store.lastError = nil }
+                            .buttonStyle(SecondaryButtonStyle())
+                    }
+                    .font(.system(size: 11))
+                    .foregroundStyle(Theme.accent)
+                    .padding(10)
+                    .background(Theme.accentBg, in: RoundedRectangle(cornerRadius: 8))
+                    .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(Theme.accentBorder))
+                }
                 if let message {
                     Text(verbatim: message).font(.system(size: 11)).foregroundStyle(Theme.accent)
                 }
