@@ -8,7 +8,10 @@ enum ReportExporter {
     static func export(user: UserProfile, session: TestSession, reference: TestSession?, headphone: HeadphoneProfile?) {
         let panel = NSSavePanel()
         panel.allowedContentTypes = [.pdf]
-        panel.nameFieldStringValue = "Audiogramme \(user.name) \(Format.day.string(from: session.date).replacingOccurrences(of: "/", with: "-")).pdf"
+        let day = Format.day.string(from: session.date)
+            .replacingOccurrences(of: "/", with: "-")
+            .replacingOccurrences(of: ".", with: "-")
+        panel.nameFieldStringValue = String(localized: "Audiogramme \(user.name) \(day).pdf")
         guard panel.runModal() == .OK, let url = panel.url else { return }
 
         let page = ReportPage(user: user, session: session, reference: reference, headphone: headphone)
@@ -40,8 +43,8 @@ private struct ReportPage: View {
                 Spacer()
                 Text(verbatim: Format.long.string(from: session.date)).font(.system(size: 13)).foregroundStyle(.gray)
             }
-            Text(verbatim: "Audiogramme · \(user.name)").font(.system(size: 24, weight: .semibold))
-            Text(verbatim: "Né(e) en \(String(user.birthYear)) · casque : \(headphone?.name ?? "?") (volume \(Int((headphone?.volume ?? 0) * 100)) %)")
+            Text("Audiogramme · \(user.name)").font(.system(size: 24, weight: .semibold))
+            Text("Né(e) en \(String(user.birthYear)) · casque : \(headphone?.name ?? "?") (volume \(Int((headphone?.volume ?? 0) * 100)) %)")
                 .font(.system(size: 12)).foregroundStyle(.gray)
             Text(verbatim: formatLine)
                 .font(.system(size: 12)).foregroundStyle(.gray)
@@ -53,20 +56,22 @@ private struct ReportPage: View {
 
             table
             if hasNoResponse {
-                Text(verbatim: "« > \(session.format.maxLevel) » : rien entendu, même au niveau maximum de l'app. « - » : fréquence non testée.")
+                Text("« > \(session.format.maxLevel) » : rien entendu, même au niveau maximum de l'app. « - » : fréquence non testée.")
                     .font(.system(size: 11)).foregroundStyle(.gray)
             }
             if let note = session.note {
-                Text(verbatim: "Commentaire : \(note)")
+                Text("Commentaire : \(note)")
                     .font(.system(size: 12))
             }
             if let r = session.reliability {
-                Text(verbatim: "Essais pièges ignorés : \(Int((r * 100).rounded())) % · appuis sans bip : \(session.spuriousPresses)"
-                     + (session.noisy ? " · pièce bruyante" : ""))
+                let percent = Int((r * 100).rounded())
+                Text(session.noisy
+                     ? LocalizedStringKey("Essais pièges ignorés : \(percent) % · appuis sans bip : \(session.spuriousPresses) · pièce bruyante")
+                     : LocalizedStringKey("Essais pièges ignorés : \(percent) % · appuis sans bip : \(session.spuriousPresses)"))
                     .font(.system(size: 11)).foregroundStyle(.gray)
             }
             Spacer()
-            Text(verbatim: "Valeurs en dB relatifs à l'application, comparables uniquement avec le même casque au même volume. Outil de suivi personnel : ne remplace pas un audiogramme réalisé par un professionnel de santé.")
+            Text("Valeurs en dB relatifs à l'application, comparables uniquement avec le même casque au même volume. Outil de suivi personnel : ne remplace pas un audiogramme réalisé par un professionnel de santé.")
                 .font(.system(size: 10)).foregroundStyle(.gray)
         }
         .padding(36)
@@ -78,21 +83,21 @@ private struct ReportPage: View {
     private var formatLine: String {
         let ears: String
         switch session.earMode {
-        case .both: ears = "deux oreilles"
-        case .right: ears = "oreille droite seule"
-        case .left: ears = "oreille gauche seule"
+        case .both: ears = String(localized: "deux oreilles")
+        case .right: ears = String(localized: "oreille droite seule")
+        case .left: ears = String(localized: "oreille gauche seule")
         }
         if session.kidMode || session.format == .kid {
-            return "Mode enfant (plafond \(session.format.maxLevel) dB) · \(ears)"
+            return String(localized: "Mode enfant (plafond \(session.format.maxLevel) dB) · \(ears)")
         }
         let name: String
         switch session.format {
-        case .quick: name = "Rapide"
-        case .standard: name = "Moyen"
-        case .full: name = "Complet"
-        case .kid: name = "Enfant"
+        case .quick: name = String(localized: "Rapide")
+        case .standard: name = String(localized: "Moyen")
+        case .full: name = String(localized: "Complet")
+        case .kid: name = String(localized: "Enfant")
         }
-        return "Test \(name) · \(ears)"
+        return String(localized: "Test \(name) · \(ears)")
     }
 
     private var hasNoResponse: Bool { session.thresholds.contains(where: \.noResponse) }

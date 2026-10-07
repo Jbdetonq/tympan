@@ -211,3 +211,17 @@
 "Joueur" = "Player";
 "Crée d'abord un profil casque en lançant un test : le jeu reprend son volume." = "First create a headphone profile by starting a test: the game uses its volume.";
 "Aucun casque détecté : branche ton casque." = "No headphones detected: plug in your headphones.";
+
+/* PDF report */
+"Audiogramme %@ %@.pdf" = "Audiogram %@ %@.pdf";
+"Né(e) en %@ · casque : %@ (volume %lld %%)" = "Born in %1$@ · headphones: %2$@ (volume %3$lld%%)";
+"deux oreilles" = "both ears";
+"oreille droite seule" = "right ear only";
+"oreille gauche seule" = "left ear only";
+"Mode enfant (plafond %lld dB) · %@" = "Kids mode (capped at %1$lld dB) · %2$@";
+"Test %@ · %@" = "%1$@ test · %2$@";
+"« > %lld » : rien entendu, même au niveau maximum de l'app. « - » : fréquence non testée." = "“> %lld”: no response, even at the app's maximum level. “-”: frequency not tested.";
+"Commentaire : %@" = "Comment: %@";
+"Essais pièges ignorés : %lld %% · appuis sans bip : %lld" = "Catch trials ignored: %1$lld%% · presses without a beep: %2$lld";
+"Essais pièges ignorés : %lld %% · appuis sans bip : %lld · pièce bruyante" = "Catch trials ignored: %1$lld%% · presses without a beep: %2$lld · noisy room";
+"Valeurs en dB relatifs à l'application, comparables uniquement avec le même casque au même volume. Outil de suivi personnel : ne remplace pas un audiogramme réalisé par un professionnel de santé." = "Values in dB relative to the app, comparable only with the same headphones at the same volume. Personal tracking tool: does not replace an audiogram taken by a health professional.";

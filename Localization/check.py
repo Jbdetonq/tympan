@@ -41,7 +41,8 @@ def specs(text):
 
 
 def normalized(key):
-    return SPEC.sub("%@", key)
+    """Compares keys whatever the placeholder type; genstrings writes % where the real key has %%."""
+    return SPEC.sub("%@", key.replace("%%", "%"))
 
 
 def code_keys():
