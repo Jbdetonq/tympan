@@ -44,6 +44,21 @@ final class TestRunner {
     private(set) var lastHitFrequency: Int?
     /// Incrémenté à chaque appui accepté (retour visuel du bouton).
     private(set) var pressCount = 0
+    /// Mode enfant : mesures dont l'animal peut être montré (trouvé sur un bip entendu, ou endormi).
+    private(set) var revealedKeys: Set<String> = []
+
+    /// Mode enfant : bip de révélation joué après un seuil validé sur un bip raté,
+    /// pour que l'animal apparaisse sur un appui et pas dans le silence. Ne change pas le seuil.
+    private struct Reveal {
+        let ear: Ear
+        let frequency: Int
+        var level: Int
+        var attempts = 0
+    }
+    private var pendingReveals: [Reveal] = []
+    private var revealTrialsDone = 0
+    static let revealMargin = 5
+    static let maxRevealAttempts = 2
 
     private let tone = ToneGenerator()
     @ObservationIgnored private var task: Task<Void, Never>?
@@ -67,10 +82,18 @@ final class TestRunner {
 
     private var remainingTrials: Int {
         tracks.reduce(0) { $0 + $1.estimatedRemainingTrials } + retests.reduce(0) { $0 + $1.estimatedRemainingTrials }
+            + pendingReveals.count
     }
 
     private var doneTrials: Int {
-        tracks.reduce(0) { $0 + $1.trials } + retests.reduce(0) { $0 + $1.trials }
+        tracks.reduce(0) { $0 + $1.trials } + retests.reduce(0) { $0 + $1.trials } + revealTrialsDone
+    }
+
+    nonisolated static func key(ear: Ear, frequency: Int) -> String { "\(ear.rawValue)-\(frequency)" }
+
+    /// Mode enfant : l'animal de cette mesure peut être montré.
+    func isRevealed(_ track: ThresholdTrack) -> Bool {
+        revealedKeys.contains(Self.key(ear: track.ear, frequency: track.frequency))
     }
 
     /// Fréquences terminées / total (vérification comprise).
@@ -150,13 +173,21 @@ final class TestRunner {
 
         audioLog.info("Mesure des seuils")
         phase = .measuring
-        while !Task.isCancelled, let i = randomOpenIndex(tracks) {
+        while !Task.isCancelled {
+            if let r = pendingReveals.first {
+                await trial(frequency: r.frequency, level: r.level, ear: r.ear) { heard in
+                    self.recordReveal(heard: heard)
+                }
+                continue
+            }
+            guard let i = randomOpenIndex(tracks) else { break }
             if tracks[i].trials == 0 {
                 tracks[i].prime(startLevel: probableStart(for: tracks[i]))
             }
             let t = tracks[i]
             await trial(frequency: t.frequency, level: t.level, ear: t.ear) { heard in
                 self.tracks[i].record(heard: heard)
+                self.afterRecord(self.tracks[i], heard: heard)
             }
         }
 
@@ -176,6 +207,32 @@ final class TestRunner {
         restoreVolume()
         result = buildSession()
         phase = .finished
+    }
+
+    /// Mode enfant : décide quand l'animal d'une mesure terminée peut apparaître.
+    private func afterRecord(_ track: ThresholdTrack, heard: Bool) {
+        guard config.kidMode, track.isDone else { return }
+        let key = Self.key(ear: track.ear, frequency: track.frequency)
+        if track.noResponse || heard {
+            revealedKeys.insert(key)
+        } else {
+            // Seuil validé sur un bip raté : un bip de plus, un peu au-dessus du seuil.
+            let level = min(track.threshold + Self.revealMargin, track.maxLevel)
+            pendingReveals.append(Reveal(ear: track.ear, frequency: track.frequency, level: level))
+        }
+    }
+
+    private func recordReveal(heard: Bool) {
+        guard var r = pendingReveals.first else { return }
+        revealTrialsDone += 1
+        r.attempts += 1
+        if heard || r.attempts >= Self.maxRevealAttempts {
+            pendingReveals.removeFirst()
+            revealedKeys.insert(Self.key(ear: r.ear, frequency: r.frequency))
+        } else {
+            r.level = min(r.level + Self.revealMargin, config.length.maxLevel)
+            pendingReveals[0] = r
+        }
     }
 
     /// Seuil de la fréquence déjà mesurée la plus proche (même oreille) + 15 dB, sinon 35 dB.

@@ -8,6 +8,8 @@ struct UserDetailView: View {
     var onNewTest: (TestLength?) -> Void
     /// Ouvre la page d'accueil d'un jeu.
     var onOpenGame: (AppPage) -> Void = { _ in }
+    /// Ouvre la page « Lire un audiogramme ».
+    var onReadingGuide: () -> Void = {}
 
     @State private var selectedSessionID: UUID?
     @State private var evoFrequency = 4000
@@ -130,6 +132,8 @@ struct UserDetailView: View {
                 .font(.system(size: 12))
                 .foregroundStyle(Theme.muted)
                 if let s = displayed {
+                    ResultSummaryView(lines: Analysis.summary(session: s, reference: user.reference),
+                                      onHelp: onReadingGuide)
                     SessionNoteEditor(userID: user.id, session: s)
                         .id(s.id)
                 }

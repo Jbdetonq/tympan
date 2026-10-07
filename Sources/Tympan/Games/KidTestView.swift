@@ -2,7 +2,8 @@ import AppKit
 import SwiftUI
 
 /// Écran de test en mode enfant : même TestRunner, présentation en jeu.
-/// Un animal apparaît à chaque bip entendu ; un appui dans le vide ne fait rien de visible.
+/// Chaque appui fait une onde neutre (la même avec ou sans bip) ; un animal apparaît quand
+/// son seuil est trouvé, toujours juste après un bip entendu (bip de révélation si besoin).
 struct KidTestView: View {
     var runner: TestRunner
     let userName: String
@@ -18,6 +19,8 @@ struct KidTestView: View {
     @State private var momentToken = 0
     @State private var parentNote = ""
     @State private var announced: Set<String> = []
+    /// Ondes affichées à chaque appui (identifiants, les plus anciennes disparaissent).
+    @State private var ripples: [Int] = []
 
     var body: some View {
         VStack(spacing: 20) {
@@ -44,7 +47,8 @@ struct KidTestView: View {
             if let m = keyMonitor { NSEvent.removeMonitor(m) }
             keyMonitor = nil
         }
-        .onChange(of: runner.doneCount) { announceNewThresholds() }
+        .onChange(of: runner.revealedKeys) { announceNewThresholds() }
+        .onChange(of: runner.pressCount) { addRipple() }
         .confirmationDialog("Arrêter le test ? Les résultats ne seront pas enregistrés.", isPresented: $confirmStop) {
             Button("Arrêter", role: .destructive) {
                 runner.cancel()
@@ -53,11 +57,11 @@ struct KidTestView: View {
         }
     }
 
-    /// Un bip entendu ne montre rien : seul un seuil trouvé fait apparaître l'animal.
+    /// Seuil trouvé (sur un bip entendu) : l'animal apparaît.
     /// Aucune réponse jusqu'à 70 dB : l'animal arrive endormi, le jeu continue.
     private func announceNewThresholds() {
-        for t in runner.tracks where t.isDone {
-            let key = "\(t.ear.rawValue)-\(t.frequency)"
+        for t in runner.tracks where runner.isRevealed(t) {
+            let key = TestRunner.key(ear: t.ear, frequency: t.frequency)
             guard !announced.contains(key), let a = Animal.forFrequency(t.frequency) else { continue }
             announced.insert(key)
             show(t.noResponse ? .asleep(a, t.ear) : .found(a, t.ear))
@@ -74,8 +78,19 @@ struct KidTestView: View {
         }
     }
 
+    /// Onde neutre à chaque appui : ne dit jamais s'il y avait un bip.
+    private func addRipple() {
+        let id = (ripples.last ?? 0) + 1
+        ripples.append(id)
+        if ripples.count > 4 { ripples.removeFirst() }
+        Task {
+            try? await Task.sleep(for: .seconds(0.8))
+            ripples.removeAll { $0 == id }
+        }
+    }
+
     private func status(_ a: Animal, _ ear: Ear) -> SlotStatus {
-        guard let t = runner.tracks.first(where: { $0.frequency == a.frequency && $0.ear == ear }), t.isDone else {
+        guard let t = runner.tracks.first(where: { $0.frequency == a.frequency && $0.ear == ear }), runner.isRevealed(t) else {
             return .hidden
         }
         return t.noResponse ? .asleep : .found
@@ -177,6 +192,7 @@ struct KidTestView: View {
     private func stageFrame<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
         ZStack {
             StarField()
+            ForEach(ripples, id: \.self) { _ in TapRipple() }
             content()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -399,7 +415,25 @@ private struct StarField: View {
     }
 }
 
-/// Aucun retour visuel à l'appui : seul un bip réellement entendu fait apparaître un animal.
+/// Onde menthe qui part du centre à chaque appui, identique qu'il y ait eu un bip ou non.
+private struct TapRipple: View {
+    @State private var expanded = false
+
+    var body: some View {
+        Circle()
+            .strokeBorder(Neon.mint, lineWidth: 3)
+            .frame(width: 180, height: 180)
+            .scaleEffect(expanded ? 2.4 : 0.5)
+            .opacity(expanded ? 0 : 0.7)
+            .neonGlow(Neon.mint.opacity(0.5), radius: 6)
+            .allowsHitTesting(false)
+            .onAppear {
+                withAnimation(.easeOut(duration: 0.7)) { expanded = true }
+            }
+    }
+}
+
+/// Pas d'effet d'appui du système : le retour visuel est l'onde (TapRipple).
 struct SilentButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label

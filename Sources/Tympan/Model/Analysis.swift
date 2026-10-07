@@ -57,4 +57,89 @@ enum Analysis {
         }
         return result
     }
+
+    // MARK: Résumé en phrases simples
+
+    struct SummaryLine: Identifiable {
+        enum Tone { case ok, info, warn }
+        let tone: Tone
+        let text: String
+        var id: String { text }
+    }
+
+    /// « 500 Hz », « 4 kHz ».
+    static func frequencyName(_ f: Int) -> String {
+        if f < 1000 { return "\(f) Hz" }
+        if f % 1000 == 0 { return "\(f / 1000) kHz" }
+        return "\(f / 1000),\(f % 1000 / 100) kHz"
+    }
+
+    /// Lecture d'un audiogramme pour un non-spécialiste : les deux oreilles entre elles,
+    /// la comparaison avec la référence, la fiabilité. Jamais de « normal » ou « anormal » :
+    /// les dB de l'app ne sont pas des dB HL.
+    static func summary(session s: TestSession, reference: TestSession?) -> [SummaryLine] {
+        var lines: [SummaryLine] = []
+
+        // Les deux oreilles, fréquence par fréquence (même casque, donc comparables).
+        if s.earMode == .both {
+            let common = allFrequencies.filter { s.level(.right, $0) != nil && s.level(.left, $0) != nil }
+            // Écart positif : l'oreille gauche entend moins bien.
+            let diffs = common.map { (s.level(.left, $0) ?? 0) - (s.level(.right, $0) ?? 0) }
+            if let i = diffs.indices.max(by: { abs(diffs[$0]) < abs(diffs[$1]) }), abs(diffs[i]) >= 15 {
+                let name = frequencyName(common[i])
+                let gap = abs(diffs[i])
+                let text = diffs[i] > 0
+                    ? String(localized: "L'oreille gauche entend moins bien que la droite vers \(name) (\(gap) dB d'écart). Refais un test pour voir si ça se confirme.")
+                    : String(localized: "L'oreille droite entend moins bien que la gauche vers \(name) (\(gap) dB d'écart). Refais un test pour voir si ça se confirme.")
+                lines.append(SummaryLine(tone: .info, text: text))
+            } else if !common.isEmpty {
+                lines.append(SummaryLine(tone: .ok, text: String(localized: "Tes deux oreilles entendent à peu près pareil.")))
+            }
+        }
+
+        // Fréquences sans réponse jusqu'au niveau maximum.
+        for ear in s.earMode.ears {
+            let silent = s.thresholds.filter { $0.ear == ear && $0.noResponse }.map(\.frequency).sorted()
+            guard !silent.isEmpty else { continue }
+            let names = silent.map { frequencyName($0) }.joined(separator: ", ")
+            let text = ear == .right
+                ? String(localized: "Oreille droite : rien entendu à \(names), même au niveau maximum. À refaire, et à montrer à un ORL si ça se confirme.")
+                : String(localized: "Oreille gauche : rien entendu à \(names), même au niveau maximum. À refaire, et à montrer à un ORL si ça se confirme.")
+            lines.append(SummaryLine(tone: .warn, text: text))
+        }
+
+        // Comparaison avec la référence.
+        if let r = reference {
+            if r.id == s.id {
+                lines.append(SummaryLine(tone: .info, text: String(localized: "Ce test est ta référence : les suivants seront comparés à lui (en pointillés).")))
+            } else if r.headphoneID != s.headphoneID {
+                lines.append(SummaryLine(tone: .info, text: String(localized: "Ta référence a été faite avec un autre casque : pas de comparaison possible.")))
+            } else if !s.noisy {
+                if !degradations(latest: s, reference: r).isEmpty {
+                    lines.append(SummaryLine(tone: .warn, text: String(localized: "Moins bien que ta référence à certaines fréquences : voir le bandeau en haut de la fiche.")))
+                } else {
+                    var deltas: [Int] = []
+                    for ear in Ear.allCases {
+                        for f in allFrequencies {
+                            if let a = s.level(ear, f), let b = r.level(ear, f) { deltas.append(a - b) }
+                        }
+                    }
+                    let date = Format.long.string(from: r.date)
+                    if !deltas.isEmpty, Double(deltas.reduce(0, +)) / Double(deltas.count) <= -5 {
+                        lines.append(SummaryLine(tone: .ok, text: String(localized: "Un peu mieux que ta référence du \(date) (souvent l'habitude du test).")))
+                    } else if !deltas.isEmpty {
+                        lines.append(SummaryLine(tone: .ok, text: String(localized: "Stable par rapport à ta référence du \(date).")))
+                    }
+                }
+            }
+        }
+
+        // Fiabilité.
+        if (s.reliability.map { $0 < 0.8 } ?? false) || s.spuriousPresses > 3 {
+            lines.append(SummaryLine(tone: .info, text: String(localized: "Plusieurs appuis sans bip : résultat à prendre avec prudence.")))
+        } else if let shift = s.retestShift, shift >= 10 {
+            lines.append(SummaryLine(tone: .info, text: String(localized: "Le 1 kHz refait en fin de test a bougé de \(shift) dB : attention un peu dispersée, résultat à confirmer.")))
+        }
+        return lines
+    }
 }

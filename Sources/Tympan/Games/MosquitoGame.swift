@@ -41,6 +41,8 @@ final class MosquitoGame {
     private(set) var choice: Int?
     private(set) var lastCorrect = false
     private(set) var won = false
+    /// Le joueur a arrêté la partie avec « Je n'entends plus rien ».
+    private(set) var gaveUp = false
     private(set) var outputChanged = false
     private(set) var errorMessage: String?
     /// Bocal du moustique : n'est montré qu'après le choix.
@@ -73,6 +75,13 @@ final class MosquitoGame {
     func choose(_ jar: Int) {
         guard phase == .listening || phase == .choosing, choice == nil, (0..<3).contains(jar) else { return }
         choice = jar
+    }
+
+    /// « Je n'entends plus rien » : fin de partie, le meilleur moustique est gardé.
+    func giveUp() {
+        guard phase == .listening || phase == .choosing, choice == nil else { return }
+        gaveUp = true
+        tone.silence()
     }
 
     func replay() {
@@ -114,16 +123,19 @@ final class MosquitoGame {
             audioLog.debug("Moustique : manche \(self.round), \(self.frequency) Hz")
             await listen()
             guard !Task.isCancelled else { return }
+            if gaveUp { break }
             if choice == nil { phase = .choosing }
-            while choice == nil && !Task.isCancelled {
+            while choice == nil && !gaveUp && !Task.isCancelled {
                 if replayRequested {
                     replayRequested = false
                     await listen()
-                    if choice == nil { phase = .choosing }
+                    if choice == nil && !gaveUp { phase = .choosing }
                 }
                 await pause(0.03)
             }
-            guard !Task.isCancelled, let c = choice else { return }
+            guard !Task.isCancelled else { return }
+            if gaveUp { break }
+            guard let c = choice else { return }
 
             lastCorrect = c == mosquitoJar
             if lastCorrect {
@@ -157,7 +169,7 @@ final class MosquitoGame {
         heard = []
         for i in 0..<3 {
             await waitForOutput()
-            guard !Task.isCancelled, choice == nil else { break }
+            guard !Task.isCancelled, choice == nil, !gaveUp else { break }
             playingJar = i
             if i == mosquitoJar {
                 tone.play(frequency: Double(frequency), level: Self.level, ear: nil,
@@ -174,7 +186,7 @@ final class MosquitoGame {
     /// Attente écourtée dès que le joueur a choisi un bocal.
     private func pauseUntilChoice(_ seconds: Double) async {
         let deadline = Date().addingTimeInterval(seconds)
-        while Date() < deadline && choice == nil && !Task.isCancelled {
+        while Date() < deadline && choice == nil && !gaveUp && !Task.isCancelled {
             await pause(0.02)
         }
     }

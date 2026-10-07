@@ -232,10 +232,11 @@ struct TestView: View {
             }
             Panel {
                 VStack(alignment: .leading, spacing: 6) {
-                    SectionLabel("Fréquences")
-                    Text(verbatim: "\(runner.doneCount)/\(runner.totalCount)")
-                        .font(Theme.mono(30, .semibold))
-                    Text("terminées, oreilles confondues").font(.system(size: 13)).foregroundStyle(Theme.muted)
+                    SectionLabel("C'est normal")
+                    Text("Certains bips sont trop faibles pour être entendus : le test cherche ta limite. N'appuie que si tu entends vraiment quelque chose.")
+                        .font(.system(size: 14))
+                        .foregroundStyle(Theme.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
             Panel {

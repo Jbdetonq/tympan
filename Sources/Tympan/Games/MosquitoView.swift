@@ -164,6 +164,8 @@ struct MosquitoView: View {
         }
     }
 
+    private var canAnswer: Bool { game.phase == .listening || game.phase == .choosing }
+
     private var missed: Bool { game.phase == .feedback && !game.lastCorrect }
 
     private var title: LocalizedStringKey {
@@ -183,7 +185,7 @@ struct MosquitoView: View {
         switch game.phase {
         case .starting: return "Il se cache dans un seul bocal, jamais le même."
         case .listening: return "Un seul bourdonne. Choisis dès que tu l'entends."
-        case .choosing: return "Clique sur le bon bocal, ou tape 1, 2 ou 3."
+        case .choosing: return "Choisis un bocal. Tu n'entends plus rien ? Arrête la partie en bas."
         case .feedback:
             if game.lastCorrect { return "Manche suivante : encore plus aigu." }
             return game.lives > 0 ? "On recommence avec le même son." : "Plus de vies."
@@ -226,6 +228,10 @@ struct MosquitoView: View {
                 Button("Reprendre") { game.resume() }
                     .buttonStyle(NeonButtonStyle())
             } else {
+                Button("Je n'entends plus rien") { game.giveUp() }
+                    .buttonStyle(SecondaryButtonStyle())
+                    .opacity(canAnswer ? 1 : 0.35)
+                    .allowsHitTesting(canAnswer)
                 Button {
                     game.replay()
                 } label: {
@@ -250,6 +256,13 @@ struct MosquitoView: View {
             Text(game.won ? LocalizedStringKey("Incroyable, tu l'as suivi jusqu'au bout !") : LocalizedStringKey("Partie terminée"))
                 .font(.system(size: 40, weight: .bold))
                 .multilineTextAlignment(.center)
+            if game.gaveUp {
+                Text(game.best == nil
+                     ? LocalizedStringKey("Le moustique était trop aigu dès le départ.")
+                     : LocalizedStringKey("Tu l'as entendu jusqu'à \(Format.hz(game.best ?? 0)) Hz."))
+                    .font(.system(size: 18))
+                    .foregroundStyle(Neon.caption)
+            }
             Spacer()
         }
         .frame(maxWidth: .infinity)

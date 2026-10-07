@@ -5,7 +5,7 @@ import UniformTypeIdentifiers
 /// Page affichée à droite de la barre latérale. Plus aucune feuille modale :
 /// tout s'affiche en page, seules les confirmations restent en dialogue.
 enum AppPage: Hashable {
-    case user, addUser, newTest, kidMode, mosquito, pitch, faq
+    case user, addUser, newTest, kidMode, mosquito, pitch, faq, readingGuide
 }
 
 struct ContentView: View {
@@ -35,7 +35,8 @@ struct ContentView: View {
                                 onKidMode: { open(.kidMode) },
                                 onMosquito: { open(.mosquito) },
                                 onPitch: { open(.pitch) },
-                                onFAQ: { page = .faq })
+                                onFAQ: { page = .faq },
+                                onReadingGuide: { page = .readingGuide })
                         .frame(width: 240)
                         .frame(maxHeight: .infinity)
                     Rectangle().fill(Color.white.opacity(0.06)).frame(width: 1)
@@ -118,6 +119,8 @@ struct ContentView: View {
         switch page {
         case .faq:
             FAQView()
+        case .readingGuide:
+            ReadingGuideView(onBack: selectedUser == nil ? nil : { page = .user })
         case .addUser:
             AddUserPage(canCancel: !store.data.users.isEmpty,
                         onCreate: { name, year in
@@ -165,7 +168,8 @@ struct ContentView: View {
             if let user = selectedUser {
                 UserDetailView(user: user,
                                onNewTest: { length in openNewTest(length: length) },
-                               onOpenGame: { open($0) })
+                               onOpenGame: { open($0) },
+                               onReadingGuide: { page = .readingGuide })
                     .id(user.id)
             } else {
                 welcome
@@ -222,6 +226,7 @@ struct SidebarView: View {
     var onMosquito: () -> Void
     var onPitch: () -> Void
     var onFAQ: () -> Void
+    var onReadingGuide: () -> Void
     @State private var userToDelete: UserProfile?
     @State private var message: String?
 
@@ -273,6 +278,7 @@ struct SidebarView: View {
                     menuItem("La juste note", icon: "music.note", page: .pitch, action: onPitch)
 
                     header("Aide")
+                    menuItem("Lire un audiogramme", icon: "chart.xyaxis.line", page: .readingGuide, action: onReadingGuide)
                     menuItem("Questions fréquentes", icon: "questionmark.circle", page: .faq, action: onFAQ)
 
                     header("Données")
