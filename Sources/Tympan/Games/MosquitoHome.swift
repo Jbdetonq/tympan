@@ -130,7 +130,7 @@ struct MosquitoHomeView: View {
         if let id = selection, let user = store.user(id) {
             if let i = ranks.firstIndex(where: { $0.user.id == id }) {
                 if i >= 3 {
-                    Text("Record de \(user.name) : \(Format.hz(ranks[i].best)) Hz, \(i + 1)e place.")
+                    Text("Record de \(user.name) : \(Format.hz(ranks[i].best)) Hz, \(Format.place(i)).")
                         .font(.system(size: 14))
                         .foregroundStyle(Neon.caption)
                         .frame(maxWidth: .infinity)

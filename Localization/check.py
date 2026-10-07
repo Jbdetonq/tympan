@@ -71,7 +71,10 @@ def check(lang, keys_in_code):
             problems += 1
             continue
         if name == "Localizable.strings":
-            table = load(path) or {}
+            table.update(load(path) or {})
+        if name == "Localizable.stringsdict":
+            plurals = load(path) or {}
+            table.update({k: k for k in plurals})
 
     for key, value in table.items():
         if not isinstance(value, str):

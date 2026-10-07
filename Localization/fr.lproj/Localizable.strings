@@ -1,2 +1,5 @@
 /* Français : les textes du code sont déjà en français et servent de clés.
    Ce fichier ne contient que les exceptions (textes dont la clé diffère de l'affichage). */
+
+/* Niveau de La juste note : clé distincte du format de test « Moyen ». */
+"Moyen (jeu)" = "Moyen";

@@ -5,7 +5,8 @@ extension PitchLevel {
     var title: LocalizedStringKey {
         switch self {
         case .easy: return "Facile"
-        case .medium: return "Moyen"
+        // Clé distincte du format de test « Moyen » (Standard en anglais) ; affichée « Moyen » en français.
+        case .medium: return "Moyen (jeu)"
         case .hard: return "Difficile"
         }
     }
@@ -525,7 +526,7 @@ extension PitchLevel {
     var titleText: String {
         switch self {
         case .easy: return String(localized: "Facile")
-        case .medium: return String(localized: "Moyen")
+        case .medium: return String(localized: "Moyen (jeu)")
         case .hard: return String(localized: "Difficile")
         }
     }

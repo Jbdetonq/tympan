@@ -169,7 +169,7 @@ struct PitchHomeView: View {
         if let id = selection, let user = store.user(id) {
             if let i = ranks.firstIndex(where: { $0.user.id == id }) {
                 if i >= 3 {
-                    Text("Record de \(user.name) en \(level.titleText) : \(ranks[i].record.stars) étoiles, \(i + 1)e place.")
+                    Text("Record de \(user.name) en \(level.titleText) : \(ranks[i].record.stars) étoiles, \(Format.place(i)).")
                         .font(.system(size: 14))
                         .foregroundStyle(Neon.caption)
                         .frame(maxWidth: .infinity)
