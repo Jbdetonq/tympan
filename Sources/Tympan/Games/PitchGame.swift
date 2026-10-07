@@ -66,14 +66,16 @@ enum PitchMath {
         440 * pow(2, (midi - 69) / 12)
     }
 
-    static let names = ["Do", "Do♯", "Ré", "Ré♯", "Mi", "Fa", "Fa♯", "Sol", "Sol♯", "La", "La♯", "Si"]
+    static let frenchNames = ["Do", "Do♯", "Ré", "Ré♯", "Mi", "Fa", "Fa♯", "Sol", "Sol♯", "La", "La♯", "Si"]
+    static let englishNames = ["C", "C♯", "D", "D♯", "E", "F", "F♯", "G", "G♯", "A", "A♯", "B"]
+    static var names: [String] { AppLocale.isFrench ? frenchNames : englishNames }
 
-    /// Note la plus proche, notation scientifique (La 4 = 440 Hz).
+    /// Note la plus proche, notation scientifique : « La 4 » en français, « A4 » en anglais (440 Hz).
     static func noteName(_ midi: Double, spaced: Bool = true) -> String {
         let n = Int(midi.rounded())
         let name = names[((n % 12) + 12) % 12]
         let octave = Int((Double(n) / 12).rounded(.down)) - 1
-        return spaced ? "\(name) \(octave)" : "\(name)\(octave)"
+        return spaced && AppLocale.isFrench ? "\(name) \(octave)" : "\(name)\(octave)"
     }
 
     static func black(_ n: Int) -> Bool {

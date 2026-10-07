@@ -10,6 +10,7 @@ enum AppPage: Hashable {
 
 struct ContentView: View {
     @Environment(DataStore.self) private var store
+    @Environment(AppActivity.self) private var activity
     @State private var page: AppPage = .user
     @State private var selectedUserID: UUID?
     @State private var runner: TestRunner?
@@ -22,7 +23,7 @@ struct ContentView: View {
     var body: some View {
         Group {
             // Test ou partie en cours : plein écran, barre latérale repliée.
-            if runner != nil || mosquito != nil || pitch != nil {
+            if isBusy {
                 FitOrScroll { fullScreenPage }
             } else {
                 // Mise en page simple (pas de NavigationSplitView) : la barre latérale et
@@ -61,7 +62,12 @@ struct ContentView: View {
         .onAppear {
             if selectedUserID == nil { selectedUserID = store.data.users.first?.id }
         }
+        // Les Réglages bloquent le changement de langue (redémarrage) pendant un test ou une partie.
+        .onChange(of: isBusy) { activity.busy = isBusy }
     }
+
+    /// Test ou partie en cours.
+    private var isBusy: Bool { runner != nil || mosquito != nil || pitch != nil }
 
     /// Test ou partie en cours (plein écran).
     @ViewBuilder

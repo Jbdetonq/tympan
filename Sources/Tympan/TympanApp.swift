@@ -5,11 +5,13 @@ import SwiftUI
 struct TympanApp: App {
     @NSApplicationDelegateAdaptor(TympanAppDelegate.self) private var appDelegate
     @State private var store = DataStore()
+    @State private var activity = AppActivity()
 
     var body: some Scene {
         WindowGroup("Tympan") {
             ContentView()
                 .environment(store)
+                .environment(activity)
                 .preferredColorScheme(.dark)
                 .tint(Theme.accent)
                 // Min seul (pas de max) : la fenêtre ne peut pas rétrécir sous la taille
@@ -35,6 +37,12 @@ struct TympanApp: App {
                 }
                 .keyboardShortcut("i")
             }
+        }
+
+        // Menu Tympan > Réglages (⌘,) : choix de la langue.
+        Settings {
+            SettingsView()
+                .environment(activity)
         }
     }
 }

@@ -9,8 +9,7 @@ enum Analysis {
 
     static func frequencyLabel(_ f: Int) -> String {
         if f < 1000 { return "\(f)" }
-        if f % 1000 == 0 { return "\(f / 1000)k" }
-        return String(format: "%.1fk", Double(f) / 1000)
+        return "\(Format.decimal(Double(f) / 1000))k"
     }
 
     /// Sessions comparables : même profil casque, pièce calme. Triées de la plus ancienne à la plus récente.
@@ -93,8 +92,7 @@ enum Analysis {
     /// « 500 Hz », « 4 kHz ».
     static func frequencyName(_ f: Int) -> String {
         if f < 1000 { return "\(f) Hz" }
-        if f % 1000 == 0 { return "\(f / 1000) kHz" }
-        return "\(f / 1000),\(f % 1000 / 100) kHz"
+        return "\(Format.decimal(Double(f) / 1000)) kHz"
     }
 
     /// Lecture d'un audiogramme pour un non-spécialiste : les deux oreilles entre elles,

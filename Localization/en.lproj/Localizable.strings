@@ -1,3 +1,28 @@
 /* English. Each key is the French text used in the code.
    Keep %@, %lld, %lf and their order. Write a percent sign as %%.
    No em dash or en dash. Glossary: see README, section Translations. */
+
+/* Results summary ("In plain words") */
+"L'oreille gauche entend moins bien que la droite vers %@ (%lld dB d'écart). Refais un test pour voir si ça se confirme." = "Your left ear hears less well than your right around %@ (%lld dB apart). Take another test to see if it holds.";
+"L'oreille droite entend moins bien que la gauche vers %@ (%lld dB d'écart). Refais un test pour voir si ça se confirme." = "Your right ear hears less well than your left around %@ (%lld dB apart). Take another test to see if it holds.";
+"Tes deux oreilles entendent à peu près pareil." = "Both your ears hear about the same.";
+"Oreille droite : rien entendu à %@, même au niveau maximum. À refaire, et à montrer à un ORL si ça se confirme." = "Right ear: no response at %@, even at the maximum level. Test again, and see an ear specialist if it holds.";
+"Oreille gauche : rien entendu à %@, même au niveau maximum. À refaire, et à montrer à un ORL si ça se confirme." = "Left ear: no response at %@, even at the maximum level. Test again, and see an ear specialist if it holds.";
+"Ce test est ta référence : les suivants seront comparés à lui (en pointillés)." = "This test is your reference: later tests are compared to it (dotted line).";
+"Ta référence a été faite avec un autre casque : pas de comparaison possible." = "Your reference was taken with different headphones: no comparison possible.";
+"Moins bien que ta référence à certaines fréquences : voir le bandeau en haut de la fiche." = "Worse than your reference at some frequencies: see the banner at the top of the page.";
+"Un peu mieux que ta référence du %@ (souvent l'habitude du test)." = "A little better than your reference from %@ (often just practice).";
+"Stable par rapport à ta référence du %@." = "Stable compared with your reference from %@.";
+"Plusieurs appuis sans bip : résultat à prendre avec prudence." = "Several presses without a beep: treat this result with caution.";
+"Le 1 kHz refait en fin de test a bougé de %lld dB : attention un peu dispersée, résultat à confirmer." = "The 1 kHz recheck at the end moved by %lld dB: your focus may have drifted, so confirm this result.";
+
+/* Settings */
+"Langue" = "Language";
+"Suivre le système" = "Use system language";
+"Termine d'abord le test ou la partie en cours." = "Finish the current test or game first.";
+"Tympan redémarre pour appliquer la langue." = "Tympan restarts to apply the language.";
+"Redémarrer" = "Restart";
+
+/* FAQ: language */
+"Comment changer la langue ?" = "How do I change the language?";
+"Menu **Tympan > Réglages…** (⌘,), puis choisis la langue et appuie sur **Redémarrer**. Par défaut, Tympan suit la langue du Mac, et s'affiche en anglais si elle n'est pas encore traduite.\n\nLe changement n'est pas possible pendant un test ou une partie." = "Menu **Tympan > Settings…** (⌘,), then choose the language and press **Restart**. By default, Tympan follows your Mac's language, and shows English if that language is not translated yet.\n\nYou can't change it during a test or a game.";

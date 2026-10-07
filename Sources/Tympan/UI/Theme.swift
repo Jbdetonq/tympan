@@ -139,23 +139,46 @@ struct Keycap: View {
     }
 }
 
+/// Langue réellement affichée (celle des traductions chargées), qui peut différer du système :
+/// Mac en allemand = app en anglais, ou langue choisie dans les Réglages.
+enum AppLocale {
+    static let language: String = Bundle.main.preferredLocalizations.first ?? "en"
+    static var isFrench: Bool { language.hasPrefix("fr") }
+    /// Langue de l'app, région du système : formats de date et de nombre cohérents avec le texte.
+    static let current: Locale = {
+        guard let region = Locale.current.region?.identifier else { return Locale(identifier: language) }
+        return Locale(identifier: "\(language)_\(region)")
+    }()
+}
+
 enum Format {
+    /// Date courte : 07/10/26 en français, 10/07/26 en anglais américain.
     static let day: DateFormatter = {
         let f = DateFormatter()
-        f.dateFormat = "dd/MM/yy"
+        f.locale = AppLocale.current
+        f.setLocalizedDateFormatFromTemplate("ddMMyy")
         return f
     }()
 
     static let long: DateFormatter = {
         let f = DateFormatter()
+        f.locale = AppLocale.current
         f.dateStyle = .medium
         f.timeStyle = .none
         return f
     }()
 
-    /// 14800 -> "14 800".
+    /// 14800 -> « 14 800 » en français, « 14,800 » en anglais.
     static func hz(_ value: Int) -> String {
-        value >= 1000 ? "\(value / 1000) \(String(format: "%03d", value % 1000))" : "\(value)"
+        value.formatted(.number.locale(AppLocale.current))
+    }
+
+    /// Nombre décimal selon la langue : « 1,5 » ou « 1.5 ». `trim` retire les zéros inutiles (« 4 » et pas « 4,0 »).
+    static func decimal(_ value: Double, digits: Int = 1, trim: Bool = true) -> String {
+        let style = FloatingPointFormatStyle<Double>.number.locale(AppLocale.current)
+        return trim
+            ? value.formatted(style.precision(.fractionLength(0...digits)))
+            : value.formatted(style.precision(.fractionLength(digits)))
     }
 
     static func minutes(_ seconds: TimeInterval) -> String {

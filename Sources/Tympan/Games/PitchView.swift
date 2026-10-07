@@ -515,7 +515,7 @@ struct PitchView: View {
             let v = Int(e.rounded())
             return up ? "\(v) cents au-dessus (100 cents = un demi-ton)" : "\(v) cents en dessous (100 cents = un demi-ton)"
         }
-        let st = String(format: "%.1f", e / 100).replacingOccurrences(of: ".", with: ",")
+        let st = Format.decimal(e / 100, trim: false)
         return up ? "\(st) demi-tons au-dessus" : "\(st) demi-tons en dessous"
     }
 }

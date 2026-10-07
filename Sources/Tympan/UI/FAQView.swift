@@ -171,6 +171,8 @@ enum FAQContent {
                     answer: "Si tu perds de l'audition d'un coup (en quelques heures ou quelques jours), surtout d'une seule oreille, avec ou sans acouphène ou vertige : c'est une urgence. Consulte un médecin ou un ORL dans les 48 heures, sans attendre de refaire un test.\n\nMême chose pour un acouphène qui apparaît et dure, une douleur ou un écoulement. Tympan ne remplace jamais cet avis."),
             FAQItem(question: "Où sont stockées mes données ?",
                     answer: "Uniquement sur ce Mac, dans un fichier local. Rien ne part sur internet.\n\nPour passer d'un Mac à l'autre : **Données > Exporter** sur le premier, **Données > Importer** sur le second. Les historiques sont fusionnés."),
+            FAQItem(question: "Comment changer la langue ?",
+                    answer: "Menu **Tympan > Réglages…** (⌘,), puis choisis la langue et appuie sur **Redémarrer**. Par défaut, Tympan suit la langue du Mac, et s'affiche en anglais si elle n'est pas encore traduite.\n\nLe changement n'est pas possible pendant un test ou une partie."),
         ]),
         FAQSection(title: "Le test", items: [
             FAQItem(question: "Comment se passe un test ?",
