@@ -16,6 +16,7 @@
 - **Kids mode**: a real test presented as a game (an animal appears when a sound is found).
 - **Ear games**: mosquito hunt (highest frequency you can hear) and pitch matching.
 - **PDF export** of the audiogram, data export and import between Macs.
+- **English and French**. Follows your Mac's language, or choose one in **Tympan > Settings** (⌘,).
 
 ## Hearing safety
 
@@ -51,6 +52,20 @@ Requires Xcode (selected with `sudo xcode-select -s /Applications/Xcode.app`).
 
 Always launch through `build.sh` (not Xcode's Run button): the microphone needs the .app bundle. To edit the code, open `Package.swift` in Xcode.
 
+## Translations
+
+Tympan is written in French and translated into English. Other languages are welcome, no Swift needed:
+
+1. Copy `Localization/en.lproj` to `Localization/xx.lproj` (`xx` = language code, e.g. `de`, `es`, `it`).
+2. Translate the right-hand side of each line in `Localizable.strings`, `Localizable.stringsdict` (plural forms) and `InfoPlist.strings`. The left-hand side is the French original: leave it unchanged.
+3. Keep every placeholder (`%@`, `%lld`, `%1$@`...). You may reorder them with positions (`%2$@ ... %1$@`). Write a percent sign as `%%`.
+4. Add `xx` to `CFBundleLocalizations` in `Support/Info.plist`.
+5. Check: `python3 Localization/check.py xx`, then build and try it: `./build.sh` and `open dist/Tympan.app --args -AppleLanguages "(xx)"`. The new language also appears in Settings.
+
+Key terms (translate them the same way everywhere): app dB, headphone profile, threshold, catch trial, reliability, reference, Check needed, Worth showing a doctor, Kids mode, Mosquito Hunt, Pitch Match, Quick / Standard / Full.
+
+Style: short sentences, address the user informally where your language allows it, no em dash. Keep the warnings intact: Tympan is not a medical device. Medical terms stay simple (for example "ear specialist" rather than an acronym). Then open a pull request, or an issue with your files attached.
+
 ## Feedback
 
 Found a bug, have an idea? [Open an issue](../../issues/new/choose) (a free GitHub account is enough). Health professionals are welcome to suggest improvements. Please never post personal health data or test results.
@@ -77,6 +92,7 @@ Tympan is and will stay free, for individuals as well as hospitals, clinics, sch
 - **Sécurité** : le volume ne monte que si rien d'autre ne joue sur le Mac, **Échap** coupe le son tout de suite, le volume d'origine est toujours rétabli.
 - **Mode enfant** et **jeux** d'écoute (chasse au moustique, juste note).
 - **Confidentialité** : tout reste sur le Mac, aucune connexion réseau.
+- **Français et anglais**, selon la langue du Mac ou au choix dans **Tympan > Réglages** (⌘,). Pour proposer une autre langue, voir la section *Translations* plus haut.
 
 **Installation** : télécharger `Tympan.dmg` dans [Releases](../../releases), glisser Tympan dans Applications, puis au premier lancement : Réglages Système > Confidentialité et sécurité > **Ouvrir quand même**.
 

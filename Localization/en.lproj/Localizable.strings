@@ -1,6 +1,6 @@
 /* English. Each key is the French text used in the code.
-   Keep %@, %lld, %lf and their order. Write a percent sign as %%.
-   No em dash or en dash. Glossary: see README, section Translations. */
+   Keep every placeholder (%@, %lld, %lf); reorder them with positions (%1$@, %2$@). Write a percent sign as %%.
+   No em dash or en dash. Key terms and how to add a language: README, section Translations. */
 
 /* Results summary ("In plain words") */
 "L'oreille gauche entend moins bien que la droite vers %@ (%lld dB d'écart). Refais un test pour voir si ça se confirme." = "Your left ear hears less well than your right around %@ (%lld dB apart). Take another test to see if it holds.";

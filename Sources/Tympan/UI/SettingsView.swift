@@ -8,23 +8,41 @@ final class AppActivity {
 }
 
 /// Langue de l'app : celle du système, ou imposée pour Tympan seulement.
-enum LanguageChoice: String, CaseIterable, Identifiable {
-    case system, fr, en
-    var id: String { rawValue }
+/// Les langues proposées sont celles livrées dans l'app (dossiers xx.lproj) :
+/// ajouter une traduction ne demande aucun changement de code.
+enum LanguageChoice {
+    /// Code de langue (« fr », « en »…), "" pour suivre le système.
+    static let system = ""
 
     private static let key = "AppleLanguages"
 
-    /// Choix enregistré pour Tympan (le réglage global du Mac n'est pas lu ici).
-    static var saved: LanguageChoice {
-        let domain = Bundle.main.bundleIdentifier.flatMap { UserDefaults.standard.persistentDomain(forName: $0) }
-        guard let first = (domain?[key] as? [String])?.first else { return .system }
-        return LanguageChoice(rawValue: String(first.prefix(2))) ?? .system
+    /// Langues livrées, triées par leur nom dans leur propre langue.
+    static var available: [String] {
+        Bundle.main.localizations
+            .filter { $0 != "Base" }
+            .reduce(into: [String]()) { if !$0.contains($1) { $0.append($1) } }
+            .sorted { displayName($0).localizedCaseInsensitiveCompare(displayName($1)) == .orderedAscending }
     }
 
-    func save() {
-        switch self {
-        case .system: UserDefaults.standard.removeObject(forKey: Self.key)
-        case .fr, .en: UserDefaults.standard.set([rawValue], forKey: Self.key)
+    /// Nom de la langue dans sa propre langue : « Français », « English », « Deutsch ».
+    static func displayName(_ code: String) -> String {
+        let name = Locale(identifier: code).localizedString(forLanguageCode: code) ?? code
+        return name.prefix(1).uppercased() + name.dropFirst()
+    }
+
+    /// Choix enregistré pour Tympan (le réglage global du Mac n'est pas lu ici).
+    static var saved: String {
+        let domain = Bundle.main.bundleIdentifier.flatMap { UserDefaults.standard.persistentDomain(forName: $0) }
+        guard let first = (domain?[key] as? [String])?.first else { return system }
+        let code = available.first { first == $0 || first.hasPrefix($0 + "-") }
+        return code ?? system
+    }
+
+    static func save(_ code: String) {
+        if code == system {
+            UserDefaults.standard.removeObject(forKey: key)
+        } else {
+            UserDefaults.standard.set([code], forKey: key)
         }
     }
 
@@ -49,8 +67,9 @@ struct SettingsView: View {
             SectionLabel("Langue")
             Picker("Langue", selection: $choice) {
                 Text("Suivre le système").tag(LanguageChoice.system)
-                Text(verbatim: "Français").tag(LanguageChoice.fr)
-                Text(verbatim: "English").tag(LanguageChoice.en)
+                ForEach(LanguageChoice.available, id: \.self) { code in
+                    Text(verbatim: LanguageChoice.displayName(code)).tag(code)
+                }
             }
             .labelsHidden()
             .frame(width: 240)
@@ -63,7 +82,7 @@ struct SettingsView: View {
                     .fixedSize(horizontal: false, vertical: true)
                 Spacer()
                 Button("Redémarrer") {
-                    choice.save()
+                    LanguageChoice.save(choice)
                     LanguageChoice.relaunch()
                 }
                 .buttonStyle(PrimaryButtonStyle())
