@@ -32,6 +32,9 @@ final class TestRunner {
     private(set) var catchFalseAlarms = 0
     private(set) var spuriousPresses = 0
     private(set) var startDate = Date()
+    /// Temps passé à attendre (pause, Échap, muet, autre son) : non compté dans le temps écoulé.
+    private(set) var stoppedTime: TimeInterval = 0
+    private(set) var stoppedSince: Date?
     private(set) var isPaused = false
     private(set) var result: TestSession?
     private(set) var errorMessage: String?
@@ -117,6 +120,12 @@ final class TestRunner {
         guard task == nil else { return }
         startDate = Date()
         task = Task { await self.run() }
+    }
+
+    /// Temps écoulé affiché, sans les attentes.
+    func elapsed(at now: Date) -> TimeInterval {
+        let current = stoppedSince.map { now.timeIntervalSince($0) } ?? 0
+        return max(0, now.timeIntervalSince(startDate) - stoppedTime - current)
     }
 
     func respond() {
@@ -302,15 +311,22 @@ final class TestRunner {
 
     /// Attend que le son soit sûr : pas d'arrêt d'urgence, pas de muet, pas d'autre son sur le Mac.
     private func waitForSafeAudio() async {
-        while volumeLock?.hold != nil && !Task.isCancelled {
-            await pause(0.2)
-        }
+        await waitStopped { self.volumeLock?.hold != nil }
     }
 
     private func waitWhilePaused() async {
-        while isPaused && !Task.isCancelled {
+        await waitStopped { self.isPaused }
+    }
+
+    private func waitStopped(while condition: () -> Bool) async {
+        guard condition(), !Task.isCancelled else { return }
+        let since = Date()
+        stoppedSince = since
+        while condition() && !Task.isCancelled {
             await pause(0.2)
         }
+        stoppedTime += Date().timeIntervalSince(since)
+        stoppedSince = nil
     }
 
     private func lockVolume() {

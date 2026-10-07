@@ -193,8 +193,8 @@ struct TestView: View {
                     }
                 }
                 HStack(alignment: .firstTextBaseline, spacing: 16) {
-                    TimelineView(.periodic(from: .now, by: 1)) { _ in
-                        Text(verbatim: Format.minutes(Date().timeIntervalSince(runner.startDate)))
+                    TimelineView(.periodic(from: .now, by: 1)) { context in
+                        Text(verbatim: Format.minutes(runner.elapsed(at: context.date)))
                             .font(Theme.mono(110, .semibold))
                             .monospacedDigit()
                     }

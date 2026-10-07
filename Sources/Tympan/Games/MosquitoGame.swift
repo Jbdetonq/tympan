@@ -167,9 +167,11 @@ final class MosquitoGame {
     private func listen() async {
         phase = .listening
         heard = []
-        for i in 0..<3 {
+        var i = 0
+        while i < 3 {
             await waitForOutput()
             guard !Task.isCancelled, choice == nil, !gaveUp else { break }
+            let holdsBefore = volumeLock?.holdCount ?? 0
             playingJar = i
             if i == mosquitoJar {
                 tone.play(frequency: Double(frequency), level: Self.level, ear: nil,
@@ -177,8 +179,13 @@ final class MosquitoGame {
             }
             await pauseUntilChoice(Self.toneDuration)
             playingJar = nil
+            // Son coupé pendant ce bocal (Échap, muet, autre son, sortie changée) : il est rejoué.
+            if (volumeLock?.holdCount ?? 0) != holdsBefore || volumeLock?.hold != nil || outputChanged {
+                continue
+            }
             heard.insert(i)
             await pauseUntilChoice(Self.gap)
+            i += 1
         }
         playingJar = nil
     }

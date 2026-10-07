@@ -223,10 +223,12 @@ final class VolumeLock {
         guard escMonitor == nil else { return }
         escMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
             guard event.keyCode == 53 else { return event } // Échap
+            // Son déjà coupé : Échap est gardé quand même, pour qu'un second appui
+            // n'ouvre pas « Quitter » (on reprend ou quitte avec les boutons).
             let handled = MainActor.assumeIsolated { () -> Bool in
-                let active = VolumeLock.engaged.allObjects.filter { !$0.emergency }
-                active.forEach { $0.emergencyStop() }
-                return !active.isEmpty
+                let locks = VolumeLock.engaged.allObjects
+                locks.filter { !$0.emergency }.forEach { $0.emergencyStop() }
+                return !locks.isEmpty
             }
             return handled ? nil : event
         }
