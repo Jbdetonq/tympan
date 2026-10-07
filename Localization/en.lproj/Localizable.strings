@@ -127,7 +127,6 @@
 
 /* Sidebar, welcome, add user */
 "Bienvenue dans Tympan" = "Welcome to Tympan";
-"Crée un utilisateur pour faire ton premier test." = "Create a user to take your first test.";
 "Ajouter un utilisateur" = "Add a user";
 "Ajouter un utilisateur…" = "Add a User…";
 "Utilisateurs" = "Users";
@@ -520,3 +519,45 @@
 "Prends soin de tes oreilles" = "Take care of your ears";
 "Conseil AGI-SON, campagne Ear We Are" = "AGI-SON tip, Ear We Are campaign";
 "Proposer une amélioration" = "Suggest an improvement";
+
+/* Getting Started guide (first launch, Help menu) */
+"Découvrir Tympan" = "Getting Started";
+"Étape %lld sur %lld" = "Step %lld of %lld";
+"Passer" = "Skip";
+"Précédent" = "Back";
+"Suivant" = "Next";
+"Aller à l'étape %lld" = "Go to step %lld";
+"Tympan suit ton audition dans le temps. Tu fais un test chez toi, avec ton casque, puis tu le refais de temps en temps. L'app te dit si quelque chose a bougé." = "Tympan tracks your hearing over time. Take a test at home with your headphones, then repeat it now and then. The app tells you if something has changed.";
+"**Un suivi, pas un diagnostic.** Tympan ne remplace pas un examen chez un ORL." = "**Tracking, not a diagnosis.** Tympan does not replace a visit to an ear specialist.";
+"**Tout reste sur ton Mac.** Aucun compte, aucune connexion." = "**Everything stays on your Mac.** No account, no connection.";
+"**Échap coupe le son tout de suite.** Pendant un test comme pendant un jeu." = "**Esc cuts the sound right away.** During a test as well as a game.";
+"Tympan redémarre pour changer de langue." = "Tympan restarts to change language.";
+"Un profil par personne" = "One profile per person";
+"Toute la famille peut utiliser le même Mac. Chacun a sa fiche, avec son audiogramme et son historique." = "The whole family can share one Mac. Everyone gets their own page, with their audiogram and history.";
+"**Ton premier test Moyen ou Complet devient la référence.** Les tests suivants lui sont comparés." = "**Your first Standard or Full test becomes the reference.** Later tests are compared with it.";
+"**Si une fréquence bouge, un bandeau te prévient.** Tu sais alors s'il faut refaire un test ou en parler à un médecin." = "**If a frequency shifts, a banner lets you know.** You then know whether to retest or talk to a doctor.";
+"**Tu changes de Mac ?** Exporte tes données, puis importe-les sur l'autre." = "**New Mac?** Export your data, then import it on the other one.";
+"Exemple d'audiogramme : oreille droite en rouge, gauche en bleu, référence en pointillés" = "Sample audiogram: right ear in red, left in blue, reference dotted";
+"Toujours le même casque" = "Always the same headphones";
+"Tympan ne mesure pas en dB médicaux. Il compare tes tests entre eux, donc le matériel doit rester le même." = "Tympan does not measure in medical dB. It compares your tests with each other, so the equipment has to stay the same.";
+"**Un profil casque, c'est un casque et un volume.** Tu le crées au premier test, avec le bip de réglage." = "**A headphone profile is a pair of headphones and a volume.** You create it at your first test, with the setup beep.";
+"**Pendant le test, ce volume est verrouillé.** Ton volume habituel revient à la fin." = "**During the test, that volume is locked.** Your usual volume comes back at the end.";
+"**Seuls les tests faits avec le même profil sont comparés.** Nouveau casque, nouveau suivi." = "**Only tests taken with the same profile are compared.** New headphones, new tracking.";
+"Mon casque" = "My headphones";
+"Volume verrouillé pendant le test" = "Volume locked during the test";
+"Des exercices pour tous" = "Exercises for everyone";
+"Trois façons de faire travailler tes oreilles, seul ou en famille." = "Three ways to put your ears to work, alone or with the family.";
+"Un vrai test, présenté comme un jeu. Un animal apparaît à chaque son trouvé. Environ 2 minutes." = "A real test, presented as a game. An animal appears for each sound found. About 2 minutes.";
+"Compte dans l'audiogramme" = "Counts in the audiogram";
+"Trouve le bocal où se cache le moustique. Il monte dans les aigus jusqu'à ta limite." = "Find the jar where the mosquito is hiding. It climbs higher and higher until you reach your limit.";
+"Podium" = "Podium";
+"Une note sonne, retrouve-la avec le curseur. Trois niveaux, un podium par niveau." = "A note plays, find it again with the slider. Three levels, a podium for each.";
+"Podium par niveau" = "Podium per level";
+"Les jeux utilisent ton profil casque, à un niveau modéré. Ils ne comptent pas dans l'audiogramme." = "Games use your headphone profile at a moderate level. They do not count in the audiogram.";
+"Un test de temps en temps" = "A test now and then";
+"C'est parti" = "Let's go";
+"Lance un test quand tu veux depuis Exercices, Audiogramme. Prévois un endroit calme et 7 minutes." = "Take a test whenever you like from Exercises, Audiogram. Find a quiet spot and 7 minutes.";
+"Crée ton profil, puis lance ton premier test. Prévois un endroit calme et 7 minutes." = "Create your profile, then take your first test. Find a quiet spot and 7 minutes.";
+"Faire un test" = "Take a test";
+"Créer mon profil" = "Create my profile";
+"Pour revoir ce guide : Aide, Découvrir Tympan." = "To see this guide again: Help, Getting Started.";

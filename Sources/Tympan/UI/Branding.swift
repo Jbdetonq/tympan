@@ -85,6 +85,9 @@ extension Notification.Name {
     static let tympanAddUser = Notification.Name("tympan.addUser")
     static let tympanExport = Notification.Name("tympan.export")
     static let tympanImport = Notification.Name("tympan.import")
+    static let tympanOnboarding = Notification.Name("tympan.onboarding")
+    static let tympanReadingGuide = Notification.Name("tympan.readingGuide")
+    static let tympanFAQ = Notification.Name("tympan.faq")
 }
 
 /// Liens publics du projet (contact par tickets GitHub, sans adresse personnelle).

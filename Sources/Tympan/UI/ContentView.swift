@@ -5,13 +5,14 @@ import UniformTypeIdentifiers
 /// Page affichée à droite de la barre latérale. Plus aucune feuille modale :
 /// tout s'affiche en page, seules les confirmations restent en dialogue.
 enum AppPage: Hashable {
-    case user, addUser, newTest, kidMode, mosquito, pitch, faq, readingGuide
+    case user, addUser, newTest, kidMode, mosquito, pitch, faq, readingGuide, onboarding
 }
 
 struct ContentView: View {
     @Environment(DataStore.self) private var store
     @Environment(AppActivity.self) private var activity
-    @State private var page: AppPage = .user
+    @State private var page: AppPage = Onboarding.seen ? .user : .onboarding
+    @State private var onboardingStep: OnboardingStep = .welcome
     @State private var selectedUserID: UUID?
     @State private var runner: TestRunner?
     @State private var suggestedLength: TestLength?
@@ -30,12 +31,15 @@ struct ContentView: View {
                 // la page défilent chacune et ne forcent jamais la hauteur de la fenêtre.
                 HStack(spacing: 0) {
                     SidebarView(selection: sidebarSelection,
-                                active: page,
+                                active: shownPage,
+                                highlights: shownPage == .onboarding
+                                    ? onboardingStep.highlights(hasUsers: !store.data.users.isEmpty) : [],
                                 onAddUser: { page = .addUser },
                                 onAudiogram: { openNewTest(length: nil) },
                                 onKidMode: { open(.kidMode) },
                                 onMosquito: { open(.mosquito) },
                                 onPitch: { open(.pitch) },
+                                onOnboarding: { openOnboarding() },
                                 onFAQ: { page = .faq },
                                 onReadingGuide: { page = .readingGuide })
                         .frame(width: 240)
@@ -49,11 +53,23 @@ struct ContentView: View {
         }
         .background(Theme.bg)
         .onReceive(NotificationCenter.default.publisher(for: .tympanAddUser)) { _ in
-            if runner == nil && mosquito == nil && pitch == nil { page = .addUser }
+            if !isBusy { page = .addUser }
         }
-        .onChange(of: page) {
+        // Menu Aide de macOS.
+        .onReceive(NotificationCenter.default.publisher(for: .tympanOnboarding)) { _ in
+            if !isBusy { openOnboarding() }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .tympanReadingGuide)) { _ in
+            if !isBusy { page = .readingGuide }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .tympanFAQ)) { _ in
+            if !isBusy { page = .faq }
+        }
+        .onChange(of: page) { old, _ in
             mosquitoResult = nil
             pitchResult = nil
+            // Quitter le guide (Passer, fin, ou clic dans la barre latérale) : il ne revient plus seul.
+            if old == .onboarding { Onboarding.markSeen() }
         }
         .onChange(of: store.data.users.map(\.id)) {
             // Utilisateur supprimé : on bascule sur le premier restant.
@@ -64,6 +80,16 @@ struct ContentView: View {
         }
         // Les Réglages bloquent le changement de langue (redémarrage) pendant un test ou une partie.
         .onChange(of: isBusy) { activity.busy = isBusy }
+    }
+
+    /// Page réellement affichée : sans utilisateur, la fiche et les tests laissent place au guide.
+    private var shownPage: AppPage {
+        switch page {
+        case .user, .newTest, .kidMode:
+            return selectedUser == nil ? .onboarding : page
+        default:
+            return page
+        }
     }
 
     /// Test ou partie en cours.
@@ -122,7 +148,9 @@ struct ContentView: View {
 
     @ViewBuilder
     private var detail: some View {
-        switch page {
+        switch shownPage {
+        case .onboarding:
+            onboarding
         case .faq:
             FAQView()
         case .readingGuide:
@@ -142,7 +170,7 @@ struct ContentView: View {
                             onStart: { config in runner = TestRunner(config: config) })
                     .id(user.id)
             } else {
-                welcome
+                onboarding
             }
         case .kidMode:
             if let user = selectedUser {
@@ -152,7 +180,7 @@ struct ContentView: View {
                             onStart: { config in runner = TestRunner(config: config) })
                     .id(user.id)
             } else {
-                welcome
+                onboarding
             }
         case .mosquito:
             MosquitoHomeView(selection: $selectedUserID,
@@ -178,22 +206,32 @@ struct ContentView: View {
                                onReadingGuide: { page = .readingGuide })
                     .id(user.id)
             } else {
-                welcome
+                onboarding
             }
         }
     }
 
-    private var welcome: some View {
-        VStack(spacing: 16) {
-            TympanLogo(size: 72)
-            Text("Bienvenue dans Tympan").font(.system(size: 24, weight: .semibold))
-            Text("Crée un utilisateur pour faire ton premier test.")
-                .foregroundStyle(Theme.muted)
-            Button("Ajouter un utilisateur") { page = .addUser }
-                .buttonStyle(PrimaryButtonStyle())
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Theme.bg)
+    /// Guide Découvrir Tympan. Passer ou finir le marque comme vu ; sans utilisateur, on va le créer.
+    private var onboarding: some View {
+        OnboardingView(step: $onboardingStep,
+                       hasUsers: !store.data.users.isEmpty,
+                       onSkip: {
+                           Onboarding.markSeen()
+                           page = store.data.users.isEmpty ? .addUser : .user
+                       },
+                       onFinish: {
+                           Onboarding.markSeen()
+                           if store.data.users.isEmpty {
+                               page = .addUser
+                           } else {
+                               openNewTest(length: nil)
+                           }
+                       })
+    }
+
+    private func openOnboarding() {
+        onboardingStep = .welcome
+        page = .onboarding
     }
 
     private func open(_ target: AppPage) {
@@ -226,11 +264,14 @@ struct SidebarView: View {
     @Environment(DataStore.self) private var store
     @Binding var selection: UUID?
     var active: AppPage
+    /// Zones mises en avant par le guide Découvrir Tympan.
+    var highlights: Set<SidebarZone> = []
     var onAddUser: () -> Void
     var onAudiogram: () -> Void
     var onKidMode: () -> Void
     var onMosquito: () -> Void
     var onPitch: () -> Void
+    var onOnboarding: () -> Void
     var onFAQ: () -> Void
     var onReadingGuide: () -> Void
     @State private var userToDelete: UserProfile?
@@ -250,48 +291,66 @@ struct SidebarView: View {
 
             // Menu : défile si la fenêtre est trop petite.
             ScrollView(.vertical) {
-                VStack(alignment: .leading, spacing: 2) {
-                    header("Utilisateurs")
-                    ForEach(store.data.users) { user in
-                        userRow(user)
-                    }
-                    Button {
-                        onAddUser()
-                    } label: {
-                        HStack(spacing: 10) {
-                            Image(systemName: "plus")
-                                .font(.system(size: 12, weight: .semibold))
-                                .foregroundStyle(Theme.muted)
-                                .frame(width: 28, height: 28)
-                                .overlay(Circle().strokeBorder(Theme.muted.opacity(0.6),
-                                                               style: StrokeStyle(lineWidth: 1, dash: [3, 3])))
-                            Text("Ajouter un utilisateur")
-                                .foregroundStyle(Theme.secondary)
+                VStack(alignment: .leading, spacing: 4) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        header("Utilisateurs")
+                        ForEach(store.data.users) { user in
+                            userRow(user)
                         }
-                        .padding(.vertical, 3)
-                        .padding(.horizontal, 6)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .contentShape(Rectangle())
+                        Button {
+                            onAddUser()
+                        } label: {
+                            HStack(spacing: 10) {
+                                Image(systemName: "plus")
+                                    .font(.system(size: 12, weight: .semibold))
+                                    .foregroundStyle(Theme.muted)
+                                    .frame(width: 28, height: 28)
+                                    .overlay(Circle().strokeBorder(Theme.muted.opacity(0.6),
+                                                                   style: StrokeStyle(lineWidth: 1, dash: [3, 3])))
+                                Text("Ajouter un utilisateur")
+                                    .foregroundStyle(Theme.secondary)
+                            }
+                            .padding(.vertical, 3)
+                            .padding(.horizontal, 6)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .guideGlow(highlights.contains(.addUser))
                     }
-                    .buttonStyle(.plain)
+                    .padding(4)
+                    .guideGlow(highlights.contains(.users))
 
-                    header("Exercices")
-                    menuItem("Audiogramme", icon: "waveform.path.ecg", page: .newTest, action: onAudiogram)
-                        .help("Nouveau test pour l'utilisateur sélectionné")
-                    menuItem("Mode enfant", icon: "sparkles", page: .kidMode, action: onKidMode)
-                        .help("Test de l'utilisateur sélectionné, présenté en jeu")
-                    menuItem("Chasse au moustique", icon: "ant", page: .mosquito, action: onMosquito)
-                    menuItem("La juste note", icon: "music.note", page: .pitch, action: onPitch)
+                    VStack(alignment: .leading, spacing: 2) {
+                        header("Exercices")
+                        menuItem("Audiogramme", icon: "waveform.path.ecg", page: .newTest, action: onAudiogram)
+                            .help("Nouveau test pour l'utilisateur sélectionné")
+                            .guideGlow(highlights.contains(.audiogram))
+                        menuItem("Mode enfant", icon: "sparkles", page: .kidMode, action: onKidMode)
+                            .help("Test de l'utilisateur sélectionné, présenté en jeu")
+                        menuItem("Chasse au moustique", icon: "ant", page: .mosquito, action: onMosquito)
+                        menuItem("La juste note", icon: "music.note", page: .pitch, action: onPitch)
+                    }
+                    .padding(4)
+                    .guideGlow(highlights.contains(.exercises))
 
-                    header("Aide")
-                    menuItem("Lire un audiogramme", icon: "chart.xyaxis.line", page: .readingGuide, action: onReadingGuide)
-                    menuItem("Questions fréquentes", icon: "questionmark.circle", page: .faq, action: onFAQ)
+                    VStack(alignment: .leading, spacing: 2) {
+                        header("Aide")
+                        menuItem("Découvrir Tympan", icon: "safari", page: .onboarding, action: onOnboarding)
+                        menuItem("Lire un audiogramme", icon: "chart.xyaxis.line", page: .readingGuide, action: onReadingGuide)
+                        menuItem("Questions fréquentes", icon: "questionmark.circle", page: .faq, action: onFAQ)
+                    }
+                    .padding(4)
 
-                    header("Données")
-                    plainItem("Exporter les données…", icon: "square.and.arrow.up", action: exportData)
-                    plainItem("Importer des données…", icon: "square.and.arrow.down", action: importData)
+                    VStack(alignment: .leading, spacing: 2) {
+                        header("Données")
+                        plainItem("Exporter les données…", icon: "square.and.arrow.up", action: exportData)
+                        plainItem("Importer des données…", icon: "square.and.arrow.down", action: importData)
+                    }
+                    .padding(4)
+                    .guideGlow(highlights.contains(.data))
                 }
-                .padding(.horizontal, 10)
+                .padding(.horizontal, 6)
                 .padding(.bottom, 12)
             }
             .scrollBounceBehavior(.basedOnSize)
@@ -346,7 +405,7 @@ struct SidebarView: View {
     private func header(_ text: LocalizedStringKey) -> some View {
         SectionLabel(text)
             .padding(.horizontal, 6)
-            .padding(.top, 14)
+            .padding(.top, 6)
             .padding(.bottom, 4)
     }
 

@@ -37,6 +37,19 @@ struct TympanApp: App {
                 }
                 .keyboardShortcut("i")
             }
+            // Menu Aide : le guide, la lecture d'un audiogramme et la FAQ.
+            CommandGroup(replacing: .help) {
+                Button("Découvrir Tympan") {
+                    NotificationCenter.default.post(name: .tympanOnboarding, object: nil)
+                }
+                Divider()
+                Button("Lire un audiogramme") {
+                    NotificationCenter.default.post(name: .tympanReadingGuide, object: nil)
+                }
+                Button("Questions fréquentes") {
+                    NotificationCenter.default.post(name: .tympanFAQ, object: nil)
+                }
+            }
         }
 
         // Menu Tympan > Réglages (⌘,) : choix de la langue.
