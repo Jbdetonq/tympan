@@ -1,0 +1,3 @@
+/* English. Each key is the French text used in the code.
+   Keep %@, %lld, %lf and their order. Write a percent sign as %%.
+   No em dash or en dash. Glossary: see README, section Translations. */

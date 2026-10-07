@@ -3,37 +3,37 @@
 <plist version="1.0">
 <dict>
 	<key>CFBundleDevelopmentRegion</key>
-	<string>fr</string>
+	<string>en</string>
+	<key>CFBundleDisplayName</key>
+	<string>Tympan</string>
+	<key>CFBundleExecutable</key>
+	<string>Tympan</string>
+	<key>CFBundleIconFile</key>
+	<string>AppIcon</string>
+	<key>CFBundleIdentifier</key>
+	<string>fr.jb.tympan</string>
 	<key>CFBundleLocalizations</key>
 	<array>
 		<string>fr</string>
 		<string>en</string>
 	</array>
-	<key>CFBundleExecutable</key>
-	<string>Tympan</string>
-	<key>CFBundleIdentifier</key>
-	<string>fr.jb.tympan</string>
 	<key>CFBundleName</key>
 	<string>Tympan</string>
-	<key>CFBundleDisplayName</key>
-	<string>Tympan</string>
-	<key>CFBundleIconFile</key>
-	<string>AppIcon</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
 	<string>0.2.0</string>
 	<key>CFBundleVersion</key>
 	<string>2</string>
-	<key>LSMinimumSystemVersion</key>
-	<string>14.0</string>
 	<key>LSApplicationCategoryType</key>
 	<string>public.app-category.healthcare-fitness</string>
+	<key>LSMinimumSystemVersion</key>
+	<string>14.0</string>
 	<key>NSHighResolutionCapable</key>
 	<true/>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Tympan listens to the room for 3 seconds before each test to check that it is quiet enough. Nothing is recorded.</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
-	<key>NSMicrophoneUsageDescription</key>
-	<string>Tympan écoute la pièce 5 secondes avant chaque test pour vérifier qu'elle est assez calme. Rien n'est enregistré.</string>
 </dict>
 </plist>
