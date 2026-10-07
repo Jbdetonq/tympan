@@ -53,6 +53,8 @@ struct MosquitoView: View {
 
     /// Fin de partie : on enregistre, puis retour à la page d'accueil avec le bandeau de résultat.
     private func finish() {
+        // Audio impossible à démarrer : le message reste affiché, on quitte avec le bouton Quitter.
+        guard game.errorMessage == nil else { return }
         save()
         let result = MosquitoResult(userID: game.config.userID, best: game.best,
                                     previousBest: previousBest, won: game.won)

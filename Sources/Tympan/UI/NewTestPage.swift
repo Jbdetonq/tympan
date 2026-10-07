@@ -23,7 +23,10 @@ struct NewTestPage: View {
     @State private var deviceName = ""
     @State private var onSpeaker = false
     @State private var preview = ToneGenerator()
+    /// État de la sortie avant le premier bip de réglage, rendu en quittant la page.
     @State private var originalVolume: Float?
+    @State private var originalMuted = false
+    @State private var previewDevice: AudioDeviceID?
     @State private var previewTask: Task<Void, Never>?
     @State private var previewError: String?
 
@@ -179,7 +182,13 @@ struct NewTestPage: View {
                 : String(localized: "Un autre son joue sur le Mac (\(others.joined(separator: ", "))). Coupe-le avant le bip de réglage.")
             return
         }
-        if originalVolume == nil { originalVolume = SystemAudio.volume(of: d) }
+        if previewDevice != d {
+            // Première écoute, ou sortie changée depuis : on rend l'ancienne et on mémorise la nouvelle.
+            restoreOutput()
+            previewDevice = d
+            originalVolume = SystemAudio.volume(of: d)
+            originalMuted = SystemAudio.isMuted(d)
+        }
         if SystemAudio.isMuted(d) { SystemAudio.setMuted(false, of: d) }
         SystemAudio.setVolume(volume, of: d)
         do {
@@ -211,10 +220,17 @@ struct NewTestPage: View {
     private func stopPreview() {
         previewTask?.cancel()
         preview.stopEngine()
-        if let v = originalVolume, let d = SystemAudio.defaultOutputDevice() {
-            SystemAudio.setVolume(v, of: d)
-        }
+        restoreOutput()
+    }
+
+    /// Rend à la sortie modifiée par le bip de réglage son volume et son muet d'origine.
+    private func restoreOutput() {
+        guard let d = previewDevice else { return }
+        if let v = originalVolume { SystemAudio.setVolume(v, of: d) }
+        if originalMuted { SystemAudio.setMuted(true, of: d) }
+        previewDevice = nil
         originalVolume = nil
+        originalMuted = false
     }
 
     private func lengthCard(_ l: TestLength) -> some View {

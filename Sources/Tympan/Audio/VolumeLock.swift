@@ -38,6 +38,8 @@ final class VolumeLock {
     @ObservationIgnored private var emergency = false
     @ObservationIgnored private var mutedByUs = false
     @ObservationIgnored private var zeroedByUs = false
+    /// Volume juste avant la mise à zéro d'Échap (sortie sans commande muet).
+    @ObservationIgnored private var volumeBeforeZero: Float?
     @ObservationIgnored private var raised = false
     @ObservationIgnored private var everActive = false
     @ObservationIgnored private var ignoredApps: Set<String> = []
@@ -86,6 +88,8 @@ final class VolumeLock {
             AudioObjectRemovePropertyListenerBlock(device, &addr, DispatchQueue.main, block)
         }
         listeners.removeAll()
+        // Avant restoreUserVolume : si le volume du test était appliqué, c'est lui qui rend le volume d'origine.
+        undoZero()
         restoreUserVolume()
         if savedMute {
             SystemAudio.setMuted(true, of: device)
@@ -111,7 +115,11 @@ final class VolumeLock {
                 mutedByUs = true
             }
         } else {
-            // Sortie sans commande muet : volume à zéro.
+            // Sortie sans commande muet : volume à zéro, rendu à Reprendre ou à la fin.
+            if !zeroedByUs {
+                volumeBeforeZero = SystemAudio.volume(of: device)
+                if !raised { Self.writeCrashRecord(device: device, volume: volumeBeforeZero, muted: savedMute) }
+            }
             SystemAudio.setVolume(0, of: device)
             zeroedByUs = true
         }
@@ -122,7 +130,7 @@ final class VolumeLock {
     /// Reprendre après Échap ou muet : réactive le son, le volume du test revient.
     func resumeSound() {
         emergency = false
-        zeroedByUs = false
+        undoZero()
         if SystemAudio.isMuted(device) { SystemAudio.setMuted(false, of: device) }
         mutedByUs = false
         evaluate(checkOthers: true)
@@ -188,6 +196,15 @@ final class VolumeLock {
         if let v = SystemAudio.volume(of: device), abs(v - target) > 0.005 {
             SystemAudio.setVolume(target, of: device)
         }
+    }
+
+    /// Annule la mise à zéro d'Échap. Si le volume du test était appliqué, applyTarget ou
+    /// restoreUserVolume s'en chargent ; sinon (attente d'un autre son), on rend le volume d'avant Échap.
+    private func undoZero() {
+        guard zeroedByUs else { return }
+        zeroedByUs = false
+        if !raised, let v = volumeBeforeZero { SystemAudio.setVolume(v, of: device) }
+        volumeBeforeZero = nil
     }
 
     private func restoreUserVolume() {

@@ -95,6 +95,8 @@ struct PitchView: View {
 
     /// Fin de partie : on enregistre, puis retour à la page d'accueil avec le bandeau de résultat.
     private func finish() {
+        // Audio impossible à démarrer : le message reste affiché, on quitte avec le bouton Quitter.
+        guard game.errorMessage == nil else { return }
         save()
         let result = PitchResult(userID: game.config.userID, level: game.config.level,
                                  stars: game.totalStars, meanError: game.meanError, meanBias: game.meanBias,
