@@ -209,11 +209,12 @@ final class DataStore {
     /// Fusionne un export venant d'un autre Mac. Renvoie le nombre de sessions ajoutées.
     @discardableResult
     func importFile(from url: URL) throws -> Int {
-        let other = try Self.makeDecoder().decode(AppData.self, from: Data(contentsOf: url))
+        // Fichier reçu : taille bornée avant lecture, puis valeurs ramenées dans leurs plages.
+        let size = try url.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0
+        guard size <= Self.importLimit else { throw CocoaError(.fileReadTooLarge) }
+        let other = Self.sanitized(try Self.makeDecoder().decode(AppData.self, from: Data(contentsOf: url)))
         var added = 0
-        for var h in other.headphones where !data.headphones.contains(where: { $0.id == h.id }) {
-            // Fichier reçu : volume ramené dans la plage du réglage (10 à 100 %).
-            h.volume = h.volume.isFinite ? min(max(h.volume, 0.1), 1) : 0.5
+        for h in other.headphones where !data.headphones.contains(where: { $0.id == h.id }) {
             data.headphones.append(h)
         }
         if let games = other.mosquitoGames {
@@ -254,5 +255,65 @@ final class DataStore {
         }
         save()
         return added
+    }
+
+    // MARK: Contrôle d'un fichier importé
+
+    /// Taille maximale d'un fichier importé (un export réel pèse quelques dizaines de Ko).
+    static let importLimit = 20 * 1024 * 1024
+    static let nameLimit = 60
+
+    private static func cleanName(_ name: String) -> String {
+        let t = String(name.trimmingCharacters(in: .whitespacesAndNewlines).prefix(nameLimit))
+        return t.isEmpty ? "?" : t
+    }
+
+    /// Un fichier importé peut venir d'ailleurs : textes raccourcis, niveaux, fréquences et scores bornés.
+    static func sanitized(_ input: AppData) -> AppData {
+        var out = input
+        let thisYear = Calendar.current.component(.year, from: Date())
+        out.headphones = input.headphones.map { h in
+            var h = h
+            h.name = cleanName(h.name)
+            // Volume ramené dans la plage du réglage (10 à 100 %).
+            h.volume = h.volume.isFinite ? min(max(h.volume, 0.1), 1) : 0.5
+            return h
+        }
+        out.users = input.users.map { u in
+            var u = u
+            u.name = cleanName(u.name)
+            u.birthYear = min(max(u.birthYear, 1900), thisYear)
+            u.sessions = u.sessions.map { s in
+                var s = s
+                s.note = s.note.flatMap(TestSession.cleanNote)
+                s.thresholds = s.thresholds
+                    .filter { (20...20_000).contains($0.frequency) }
+                    .map { t in
+                        var t = t
+                        t.level = min(max(t.level, -10), 95)
+                        return t
+                    }
+                s.catchTrials = max(s.catchTrials, 0)
+                s.catchFalseAlarms = min(max(s.catchFalseAlarms, 0), s.catchTrials)
+                s.spuriousPresses = max(s.spuriousPresses, 0)
+                if let a = s.ambientLevel, !a.isFinite { s.ambientLevel = nil }
+                return s
+            }
+            return u
+        }
+        out.mosquitoGames = input.mosquitoGames?.map { g in
+            var g = g
+            g.bestFrequency = g.bestFrequency.map { min(max($0, 0), 20_000) }
+            g.rounds = max(g.rounds, 0)
+            return g
+        }
+        out.pitchGames = input.pitchGames?
+            .filter { $0.meanError.isFinite && $0.meanBias.isFinite }
+            .map { g in
+                var g = g
+                g.stars = min(max(g.stars, 0), 30)
+                return g
+            }
+        return out
     }
 }

@@ -53,6 +53,9 @@ struct FAQView: View {
                         Link(destination: AppLinks.repository) {
                             Label("Page du projet", systemImage: "arrow.up.right.square")
                         }
+                        Link(destination: AppLinks.privacy) {
+                            Label("Confidentialité", systemImage: "lock")
+                        }
                     }
                     .font(.system(size: 14, weight: .medium))
                     .foregroundStyle(Theme.accent)

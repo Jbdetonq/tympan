@@ -25,12 +25,16 @@
 	<string>0.2.0</string>
 	<key>CFBundleVersion</key>
 	<string>2</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>LSApplicationCategoryType</key>
 	<string>public.app-category.healthcare-fitness</string>
 	<key>LSMinimumSystemVersion</key>
 	<string>14.0</string>
 	<key>NSHighResolutionCapable</key>
 	<true/>
+	<key>NSHumanReadableCopyright</key>
+	<string>© 2026 Tympan contributors</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Tympan listens to the room for 3 seconds before each test to check that it is quiet enough. Nothing is recorded.</string>
 	<key>NSPrincipalClass</key>

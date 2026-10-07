@@ -94,6 +94,7 @@ extension Notification.Name {
 enum AppLinks {
     static let repository = URL(string: "https://github.com/Jbdetonq/tympan")!
     static let newIssue = URL(string: "https://github.com/Jbdetonq/tympan/issues/new/choose")!
+    static let privacy = URL(string: "https://github.com/Jbdetonq/tympan/blob/main/PRIVACY.md")!
 }
 
 /// Force l'icône du Dock au lancement (macOS garde parfois l'ancienne en cache).

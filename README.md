@@ -27,7 +27,7 @@
 
 ## Privacy
 
-Everything stays on your Mac. Tympan has no network access, no account, no analytics. Data lives in `~/Library/Application Support/Tympan/tympan-data.json`. The microphone is only used to measure the room level for 3 seconds.
+Everything stays on your Mac. Tympan has no network access, no account, no analytics. Data lives in `~/Library/Containers/fr.jb.tympan/Data/Library/Application Support/Tympan/tympan-data.json` (the app is sandboxed). See [PRIVACY.md](PRIVACY.md). The microphone is only used to measure the room level for 3 seconds.
 
 ## Levels are relative
 

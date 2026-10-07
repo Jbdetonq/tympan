@@ -48,11 +48,13 @@ enum LanguageChoice {
 
     /// Relance Tympan : la nouvelle langue s'applique partout d'un coup (textes, dates, PDF).
     static func relaunch() {
-        let task = Process()
-        task.executableURL = URL(fileURLWithPath: "/bin/sh")
-        task.arguments = ["-c", "sleep 1; /usr/bin/open \"$0\"", Bundle.main.bundlePath]
-        try? task.run()
-        NSApp.terminate(nil)
+        let configuration = NSWorkspace.OpenConfiguration()
+        configuration.createsNewApplicationInstance = true
+        NSWorkspace.shared.openApplication(at: Bundle.main.bundleURL, configuration: configuration) { _, error in
+            // Échec du lancement : on reste ouvert, la langue changera au prochain lancement.
+            guard error == nil else { return }
+            DispatchQueue.main.async { NSApp.terminate(nil) }
+        }
     }
 }
 
