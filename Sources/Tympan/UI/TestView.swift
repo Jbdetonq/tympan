@@ -1,13 +1,17 @@
 import AppKit
 import SwiftUI
 
+/// Écran du test adulte, en plein écran. N'affiche jamais la fréquence, le niveau, l'oreille
+/// ni le temps restant : seulement le temps écoulé et l'avancement des étapes.
 struct TestView: View {
     var runner: TestRunner
     let userName: String
+    /// Session à enregistrer, ou nil si le test a été arrêté.
     var onClose: (TestSession?) -> Void
 
     @State private var keyMonitor: Any?
     @State private var confirmStop = false
+    /// Bouton J'entends enfoncé un instant après chaque appui.
     @State private var pressFlash = false
 
     var body: some View {
@@ -70,13 +74,13 @@ struct TestView: View {
         }
     }
 
-    // Espace = j'entends, P = pause.
+    /// Espace = j'entends, P = pause.
     private func installKeyMonitor() {
         let r = runner
         keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
             // Test fini : le clavier sert au commentaire (espace, P...).
             if MainActor.assumeIsolated({ r.phase == .finished }) { return event }
-            if event.keyCode == 49 {
+            if event.keyCode == 49 { // Espace ; la répétition d'une touche tenue ne compte pas.
                 if !event.isARepeat {
                     MainActor.assumeIsolated { r.respond() }
                 }
@@ -102,6 +106,7 @@ struct TestView: View {
             if runner.phase != .finished {
                 Button(runner.isPaused ? "Reprendre" : "Pause") { runner.togglePause() }
                     .buttonStyle(SecondaryButtonStyle())
+                // Avant la mesure, rien à perdre : pas de confirmation.
                 Button("Arrêter") {
                     if runner.phase >= .measuring { confirmStop = true } else { runner.cancel(); onClose(nil) }
                 }
@@ -112,6 +117,7 @@ struct TestView: View {
 
     // MARK: Chaîne de modules
 
+    /// État d'un module de la chaîne : terminé (point vert), en cours (ambre), à venir.
     private enum StepState { case done, active, pending }
 
     private func state(for phase: TestRunner.Phase) -> StepState {
@@ -119,6 +125,7 @@ struct TestView: View {
         return runner.phase > phase ? .done : .pending
     }
 
+    /// Casque, bruit ambiant, mesure, vérification : un module par étape.
     private var chain: some View {
         HStack(spacing: 0) {
             step(title: "Casque", state: state(for: .headphones)) {
@@ -214,6 +221,7 @@ struct TestView: View {
         }
     }
 
+    /// Essais pièges et conseils, à droite du temps écoulé.
     private var sidePanel: some View {
         VStack(spacing: 16) {
             Panel {
@@ -285,6 +293,7 @@ struct BigRespondStyle: ButtonStyle {
     }
 }
 
+/// Barre d'avancement fine (valeur de 0 à 1).
 struct ProgressBar: View {
     let value: Double
     var color: Color = Theme.accent
@@ -300,6 +309,7 @@ struct ProgressBar: View {
     }
 }
 
+/// Vumètre du bruit ambiant ; les segments au-dessus du seuil de pièce bruyante passent en ambre.
 struct NoiseMeterBar: View {
     let level: Double?
     let threshold: Double
@@ -325,6 +335,7 @@ struct NoiseMeterBar: View {
     }
 }
 
+/// Barre des étapes sous le temps écoulé : casque, bruit, puis mesure (16 fois plus large).
 struct StepsProgress: View {
     var runner: TestRunner
 
@@ -364,6 +375,7 @@ struct StepsProgress: View {
     }
 }
 
+/// Fin du test : audiogramme, indices de fiabilité, commentaire, puis enregistrement.
 struct TestSummaryView: View {
     let session: TestSession
     /// Reçoit le commentaire saisi.

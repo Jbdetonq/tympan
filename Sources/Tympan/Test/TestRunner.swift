@@ -2,6 +2,7 @@ import CoreAudio
 import Foundation
 import Observation
 
+/// Réglages choisis dans Nouveau test (ou le mode enfant).
 struct TestConfig {
     var userID: UUID
     var earMode: EarMode
@@ -14,6 +15,7 @@ struct TestConfig {
 @MainActor
 @Observable
 final class TestRunner {
+    /// Étapes du test, dans l'ordre (affichées dans la chaîne de modules).
     enum Phase: Int, Comparable {
         case headphones, ambient, measuring, verifying, finished
         static func < (a: Phase, b: Phase) -> Bool { a.rawValue < b.rawValue }
@@ -21,6 +23,7 @@ final class TestRunner {
 
     /// Au-delà, la session est marquée "environnement bruyant".
     static let noisyThreshold: Double = 45
+    /// Part des essais pièges (silence).
     static let catchProbability = 0.1
 
     let config: TestConfig
@@ -28,18 +31,24 @@ final class TestRunner {
     private(set) var ambientLevel: Double?
     private(set) var noisy = false
     private(set) var micUnavailable = false
+    /// Pièges présentés, appuis sur ces pièges, appuis hors fenêtre.
     private(set) var catchTotal = 0
     private(set) var catchFalseAlarms = 0
     private(set) var spuriousPresses = 0
     private(set) var startDate = Date()
     /// Temps passé à attendre (pause, Échap, muet, autre son) : non compté dans le temps écoulé.
     private(set) var stoppedTime: TimeInterval = 0
+    /// Début de l'attente en cours, nil si le test avance.
     private(set) var stoppedSince: Date?
     private(set) var isPaused = false
+    /// Session construite à la fin, à enregistrer par l'écran.
     private(set) var result: TestSession?
     private(set) var errorMessage: String?
+    /// Nom de la sortie audio utilisée.
     private(set) var deviceName = ""
+    /// Une recherche de seuil par oreille et par fréquence.
     private(set) var tracks: [ThresholdTrack]
+    /// Vérification : le 1 kHz refait en fin de test (Moyen et Complet).
     private(set) var retests: [ThresholdTrack]
     /// Incrémenté à chaque bonne détection (utile au mode enfant).
     private(set) var hits = 0
@@ -60,15 +69,18 @@ final class TestRunner {
     }
     private var pendingReveals: [Reveal] = []
     private var revealTrialsDone = 0
+    /// Bip de révélation : seuil + 5 dB, puis + 5 de plus si raté ; 2 essais au plus.
     static let revealMargin = 5
     static let maxRevealAttempts = 2
 
     private let tone = ToneGenerator()
     @ObservationIgnored private var task: Task<Void, Never>?
+    /// Fenêtre de réponse ouverte (bip ou piège en cours) et appui reçu pendant cette fenêtre.
     @ObservationIgnored private var windowOpen = false
     @ObservationIgnored private var respondedInWindow = false
     /// Verrou du volume ; son `hold` dit si le test attend (Échap, muet, autre son).
     private(set) var volumeLock: VolumeLock?
+    /// Sortie audio au début du test, pour repérer un changement.
     @ObservationIgnored private var device: AudioDeviceID?
     /// La sortie audio a changé pendant le test (casque débranché...) : test en pause.
     private(set) var outputChanged = false
@@ -83,6 +95,7 @@ final class TestRunner {
 
     // MARK: Affichage
 
+    /// Bips restants et faits, pour la barre de progression (estimation).
     private var remainingTrials: Int {
         tracks.reduce(0) { $0 + $1.estimatedRemainingTrials } + retests.reduce(0) { $0 + $1.estimatedRemainingTrials }
             + pendingReveals.count
@@ -92,6 +105,7 @@ final class TestRunner {
         tracks.reduce(0) { $0 + $1.trials } + retests.reduce(0) { $0 + $1.trials } + revealTrialsDone
     }
 
+    /// Identifiant d'une mesure (oreille et fréquence).
     nonisolated static func key(ear: Ear, frequency: Int) -> String { "\(ear.rawValue)-\(frequency)" }
 
     /// Mode enfant : l'animal de cette mesure peut être montré.
@@ -109,6 +123,7 @@ final class TestRunner {
         return total == 0 ? 0 : Double(doneTrials) / Double(total)
     }
 
+    /// La sortie est le haut-parleur du Mac : l'écran demande de brancher un casque.
     var headphonesOnSpeaker: Bool {
         guard let device else { return false }
         return SystemAudio.isBuiltInSpeaker(device)
@@ -116,6 +131,7 @@ final class TestRunner {
 
     // MARK: Commandes
 
+    /// Lance le test (une seule fois).
     func start() {
         guard task == nil else { return }
         startDate = Date()
@@ -128,6 +144,7 @@ final class TestRunner {
         return max(0, now.timeIntervalSince(startDate) - stoppedTime - current)
     }
 
+    /// Appui sur « J'entends » (bouton ou Espace). Hors fenêtre de réponse, il est compté comme appui en trop.
     func respond() {
         guard phase == .measuring || phase == .verifying, !isPaused else { return }
         pressCount += 1
@@ -138,6 +155,7 @@ final class TestRunner {
         }
     }
 
+    /// Pause ou reprise (touche P, ou Reprendre après un changement de sortie).
     func togglePause() {
         if isPaused, outputChanged {
             // Reprise après changement de sortie : on reverrouille sur la nouvelle sortie.
@@ -147,6 +165,7 @@ final class TestRunner {
         isPaused.toggle()
     }
 
+    /// Test quitté : arrêt du son, volume d'origine rendu, rien n'est enregistré.
     func cancel() {
         task?.cancel()
         tone.stopEngine()
@@ -155,6 +174,7 @@ final class TestRunner {
 
     // MARK: Déroulé
 
+    /// Le test complet : casque et volume, bruit ambiant, mesure, vérification, résultat.
     private func run() async {
         phase = .headphones
         lockVolume()
@@ -182,6 +202,8 @@ final class TestRunner {
 
         audioLog.info("Mesure des seuils")
         phase = .measuring
+        // Chaque essai tire au hasard une mesure non terminée (oreille et fréquence mélangées) ;
+        // les bips de révélation du mode enfant passent en priorité.
         while !Task.isCancelled {
             if let r = pendingReveals.first {
                 await trial(frequency: r.frequency, level: r.level, ear: r.ear) { heard in
@@ -231,6 +253,7 @@ final class TestRunner {
         }
     }
 
+    /// Réponse au bip de révélation : l'animal apparaît s'il est entendu, ou après le dernier essai.
     private func recordReveal(heard: Bool) {
         guard var r = pendingReveals.first else { return }
         revealTrialsDone += 1
@@ -256,6 +279,7 @@ final class TestRunner {
         return r + margin
     }
 
+    /// Une mesure non terminée tirée au hasard, nil si toutes sont finies.
     private func randomOpenIndex(_ list: [ThresholdTrack]) -> Int? {
         list.indices.filter { !list[$0].isDone }.randomElement()
     }
@@ -318,6 +342,7 @@ final class TestRunner {
         await waitStopped { self.isPaused }
     }
 
+    /// Attend tant que `condition` est vraie ; ce temps est retiré du temps écoulé.
     private func waitStopped(while condition: () -> Bool) async {
         guard condition(), !Task.isCancelled else { return }
         let since = Date()
@@ -329,6 +354,7 @@ final class TestRunner {
         stoppedSince = nil
     }
 
+    /// Verrouille le volume du profil sur la sortie par défaut ; Échap coupe aussi le générateur.
     private func lockVolume() {
         volumeLock?.release()
         volumeLock = nil
@@ -355,6 +381,7 @@ final class TestRunner {
         volumeLock = nil
     }
 
+    /// Résultat à enregistrer. L'écart de vérification est le plus grand des deux oreilles.
     private func buildSession() -> TestSession {
         var s = TestSession(headphoneID: config.headphone.id, earMode: config.earMode)
         s.thresholds = tracks.map {

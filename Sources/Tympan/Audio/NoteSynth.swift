@@ -11,17 +11,23 @@ enum Timbre: String, Codable, CaseIterable, Identifiable {
 /// pendant que le joueur déplace le curseur (glissando continu, sans clic).
 /// Niveau en dB relatifs à l'app, comme `ToneGenerator` (100 dB = 0 dBFS), en valeur efficace.
 final class NoteSynth {
+    /// Nombre maximal d'harmoniques (voix).
     static let harmonicLimit = 32
 
+    /// État de la note, partagé avec le fil audio (protégé par un verrou).
     struct Voice {
+        /// La note sonne (relâchement compris).
         var active = false
+        /// La note est tenue ; faux pendant le relâchement.
         var gate = false
         var timbre: Timbre = .flute
         var amplitude: Double = 0
         /// Hauteurs en log2(Hz) : glissement exponentiel de la hauteur courante vers la cible.
         var targetLog: Double = 8.78
         var currentLog: Double = 8.78
+        /// Hauteur pour laquelle les harmoniques ont été calculées en dernier.
         var configuredLog: Double = -100
+        /// Harmoniques utilisées : phase (en tours), poids, rapport au fondamental, vitesse d'extinction.
         var count = 0
         var phases = [Double](repeating: 0, count: NoteSynth.harmonicLimit)
         var weights = [Double](repeating: 0, count: NoteSynth.harmonicLimit)
@@ -29,14 +35,18 @@ final class NoteSynth {
         var decays = [Double](repeating: 0, count: NoteSynth.harmonicLimit)
         /// Temps depuis l'attaque (s).
         var t: Double = 0
+        /// Niveau d'enveloppe au départ de l'attaque (non nul si une note sonnait encore).
         var startLevel: Double = 0
+        /// Temps écoulé dans le relâchement et niveau d'où il part.
         var releaseT: Double = 0
         var releaseFrom: Double = 1
         /// Relâchement automatique (s après l'attaque) ; infini quand la note est tenue.
         var autoRelease: Double = .infinity
+        /// Enveloppe courante, de 0 à 1.
         var env: Double = 0
     }
 
+    /// Poids des 6 harmoniques de la flûte.
     private static let fluteWeights: [Double] = [1, 0.42, 0.16, 0.07, 0.03, 0.015]
     /// Plancher de la décroissance du piano : la note reste audible tant qu'on la tient.
     private static let pianoFloor = 0.2
@@ -47,6 +57,7 @@ final class NoteSynth {
     private var sampleRate: Double = 48_000
     private var configObserver: NSObjectProtocol?
 
+    /// Démarre le moteur (ou le relance s'il existe déjà). Même son sur les deux oreilles.
     func startEngine() throws {
         guard node == nil else {
             if !engine.isRunning { try engine.start() }
@@ -59,7 +70,9 @@ final class NoteSynth {
         }
         let sr = sampleRate
         let dt = 1 / sr
+        // Glissement de hauteur : constante de temps de 15 ms.
         let glide = 1 - exp(-1 / (0.015 * sr))
+        // Aucune harmonique au-dessus de 16 kHz ni près de la moitié de la fréquence d'échantillonnage.
         let limit = min(16_000, 0.45 * sr)
         let state = self.state
 
@@ -93,6 +106,7 @@ final class NoteSynth {
         }
     }
 
+    /// Coupe la note et arrête le moteur (fin de partie).
     func stopEngine() {
         state.withLock { $0.active = false }
         engine.stop()
@@ -232,6 +246,7 @@ final class NoteSynth {
         s.configuredLog = s.currentLog
     }
 
+    /// Gain du filtre de la voyelle « a » : 4 formants (750, 1 150, 2 600, 3 400 Hz) sur un plancher.
     private static func formantGain(_ f: Double) -> Double {
         func peak(_ center: Double, _ gain: Double, _ width: Double) -> Double {
             let x = (f - center) / width
@@ -240,6 +255,7 @@ final class NoteSynth {
         return 0.06 + peak(750, 1, 100) + peak(1150, 0.55, 120) + peak(2600, 0.28, 180) + peak(3400, 0.12, 250)
     }
 
+    /// Calcule un échantillon (fil audio).
     private static func render(_ s: inout Voice, dt: Double, glide: Double, limit: Double) -> Double {
         // Hauteur : glissement vers la cible, harmoniques recalculées tous les 1/8 de ton.
         s.currentLog += (s.targetLog - s.currentLog) * glide

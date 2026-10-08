@@ -45,10 +45,13 @@ enum PitchLevel: String, Codable, CaseIterable, Identifiable {
     }
 }
 
+/// Son d'une partie. « Au hasard » (un timbre par manche) reste possible mais n'est plus proposé :
+/// le son est imposé par le niveau.
 enum TimbreChoice: String, Codable, CaseIterable, Identifiable {
     case flute, piano, voice, random
     var id: String { rawValue }
 
+    /// Timbre de la manche.
     func pick() -> Timbre {
         switch self {
         case .flute: return .flute
@@ -62,10 +65,12 @@ enum TimbreChoice: String, Codable, CaseIterable, Identifiable {
 /// Hauteurs en numéros MIDI décimaux (69 = La 440 Hz). Un demi-ton = 1, un cent = 0,01 :
 /// l'échelle suit l'oreille (logarithmique), pas les Hz.
 enum PitchMath {
+    /// Fréquence (Hz) d'une hauteur MIDI.
     static func frequency(_ midi: Double) -> Double {
         440 * pow(2, (midi - 69) / 12)
     }
 
+    /// Noms des 12 demi-tons, à partir de Do (C).
     static let frenchNames = ["Do", "Do♯", "Ré", "Ré♯", "Mi", "Fa", "Fa♯", "Sol", "Sol♯", "La", "La♯", "Si"]
     static let englishNames = ["C", "C♯", "D", "D♯", "E", "F", "F♯", "G", "G♯", "A", "A♯", "B"]
     static var names: [String] { AppLocale.isFrench ? frenchNames : englishNames }
@@ -78,6 +83,7 @@ enum PitchMath {
         return spaced && AppLocale.isFrench ? "\(name) \(octave)" : "\(name)\(octave)"
     }
 
+    /// Touche noire du clavier (dièses).
     static func black(_ n: Int) -> Bool {
         [1, 3, 6, 8, 10].contains(((n % 12) + 12) % 12)
     }
@@ -92,6 +98,7 @@ enum PitchMath {
     }
 }
 
+/// Une manche jouée : note à retrouver et réponse, en hauteurs MIDI.
 struct PitchRound: Identifiable, Hashable {
     var id = UUID()
     let target: Double
@@ -102,6 +109,7 @@ struct PitchRound: Identifiable, Hashable {
     var stars: Int { PitchMath.stars(cents: cents) }
 }
 
+/// Joueur, casque et niveau choisis sur la page d'accueil du jeu.
 struct PitchConfig {
     var userID: UUID
     var headphone: HeadphoneProfile
@@ -113,6 +121,7 @@ struct PitchConfig {
 @MainActor
 @Observable
 final class PitchGame {
+    /// Départ, écoute du modèle, silence (Difficile), recherche au curseur, résultat de la manche, fin.
     enum Phase { case starting, listening, silence, searching, feedback, over }
 
     static let roundCount = 10
@@ -126,25 +135,35 @@ final class PitchGame {
     static let minStartDistance = 3.0
 
     let config: PitchConfig
+    /// Identifiant de la partie : l'enregistrer deux fois ne la duplique pas.
     let recordID = UUID()
     private(set) var phase: Phase = .starting
+    /// Manches jouées.
     private(set) var results: [PitchRound] = []
+    /// Timbre de la manche en cours.
     private(set) var timbre: Timbre = .flute
+    /// Étendue du curseur (hauteurs MIDI), placée au hasard autour de la note.
     private(set) var window: ClosedRange<Double> = 60...72
+    /// Note à retrouver et position du curseur (hauteurs MIDI).
     private(set) var target: Double = 66
     private(set) var cursor: Double = 62
+    /// Réécoutes du modèle restantes pour cette manche.
     private(set) var replaysLeft = 0
+    /// La note du curseur sonne.
     private(set) var sounding = false
     /// Pendant « Comparer les deux » : 0 = la note, 1 = ton choix.
     private(set) var comparePart: Int?
+    /// La sortie audio a changé : le jeu attend Reprendre.
     private(set) var outputChanged = false
     private(set) var errorMessage: String?
 
     private let synth = NoteSynth()
     @ObservationIgnored private var task: Task<Void, Never>?
+    /// Extinction différée de la note du curseur.
     @ObservationIgnored private var releaseTask: Task<Void, Never>?
     /// Verrou du volume ; son `hold` dit si le jeu attend (Échap, muet, autre son).
     private(set) var volumeLock: VolumeLock?
+    /// Sortie audio au début de la partie, pour repérer un changement.
     @ObservationIgnored private var device: AudioDeviceID?
 
     init(config: PitchConfig) {
@@ -158,8 +177,10 @@ final class PitchGame {
     }
 
     var isComplete: Bool { results.count >= Self.roundCount }
+    /// Étoiles gagnées, sur 30.
     var totalStars: Int { results.reduce(0) { $0 + $1.stars } }
 
+    /// Écart moyen en cents (valeur absolue).
     var meanError: Double? {
         guard !results.isEmpty else { return nil }
         return results.map { abs($0.cents) }.reduce(0, +) / Double(results.count)
@@ -181,6 +202,7 @@ final class PitchGame {
 
     // MARK: Commandes
 
+    /// Lance la partie (une seule fois).
     func start() {
         guard task == nil else { return }
         task = Task { await self.run() }
@@ -195,6 +217,7 @@ final class PitchGame {
         sounding = true
     }
 
+    /// Curseur relâché : la note s'éteint 0,7 s plus tard.
     func endDrag() {
         releaseLater(0.7)
     }
@@ -213,6 +236,7 @@ final class PitchGame {
         releaseLater(1.5)
     }
 
+    /// R : réécouter la note à retrouver (Facile seulement, une fois par manche).
     func replayModel() {
         guard phase == .searching, replaysLeft > 0 else { return }
         replaysLeft -= 1
@@ -226,6 +250,7 @@ final class PitchGame {
         }
     }
 
+    /// Entrée : la position du curseur est la réponse de la manche.
     func validate() {
         guard phase == .searching else { return }
         stopSound()
@@ -248,6 +273,7 @@ final class PitchGame {
         }
     }
 
+    /// Manche suivante, ou fin après la 10e.
     func next() {
         guard phase == .feedback else { return }
         task?.cancel()
@@ -260,12 +286,14 @@ final class PitchGame {
         }
     }
 
+    /// Reprise après changement de sortie : on reverrouille le volume sur la nouvelle sortie.
     func resume() {
         guard outputChanged else { return }
         lockVolume()
         outputChanged = false
     }
 
+    /// Partie quittée : rien n'est enregistré, volume d'origine rendu.
     func cancel() {
         task?.cancel()
         releaseTask?.cancel()
@@ -275,6 +303,7 @@ final class PitchGame {
 
     // MARK: Déroulé
 
+    /// Démarrage du son, puis première manche ; les suivantes sont lancées par `next`.
     private func run() async {
         lockVolume()
         do {
@@ -290,6 +319,7 @@ final class PitchGame {
         await playRound()
     }
 
+    /// Nouvelle manche : note tirée au hasard, curseur placé, écoute du modèle.
     private func playRound() async {
         timbre = config.timbre.pick()
         target = Double.random(in: Self.lowNote...Self.highNote)
@@ -320,6 +350,7 @@ final class PitchGame {
         phase = .searching
     }
 
+    /// Joue la note à retrouver (durée selon le niveau).
     private func listenModel() async {
         await waitForOutput()
         guard !Task.isCancelled else { return }
@@ -329,6 +360,7 @@ final class PitchGame {
         await pause(d + 0.25)
     }
 
+    /// Fin de partie : arrêt du son, volume d'origine rendu.
     private func finish() {
         releaseTask?.cancel()
         synth.stopEngine()
@@ -342,6 +374,7 @@ final class PitchGame {
         sounding = false
     }
 
+    /// Éteint la note du curseur après `seconds`, sauf si elle est rejouée entre-temps.
     private func releaseLater(_ seconds: Double) {
         releaseTask?.cancel()
         releaseTask = Task {
@@ -352,6 +385,7 @@ final class PitchGame {
         }
     }
 
+    /// Sortie changée : le jeu attend Reprendre.
     private func waitForOutput() async {
         if let current = SystemAudio.defaultOutputDevice(), current != device {
             audioLog.info("Sortie audio changée pendant le jeu")
@@ -367,6 +401,7 @@ final class PitchGame {
         try? await Task.sleep(for: .seconds(seconds))
     }
 
+    /// Verrouille le volume du profil sur la sortie par défaut ; Échap éteint aussi la note.
     private func lockVolume() {
         volumeLock?.release()
         volumeLock = nil

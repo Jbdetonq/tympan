@@ -1,6 +1,7 @@
 import AppKit
 import SwiftUI
 
+/// Écran de jeu de la chasse au moustique, en plein écran : bocaux à gauche, record et classement à droite.
 struct MosquitoView: View {
     @Environment(DataStore.self) private var store
     var game: MosquitoGame
@@ -9,7 +10,9 @@ struct MosquitoView: View {
     var onClose: (MosquitoResult?) -> Void
 
     @State private var keyMonitor: Any?
+    /// Record du joueur avant la partie, pour savoir s'il est battu.
     @State private var previousBest: Int?
+    /// Garde-fous : la partie n'est enregistrée et l'écran fermé qu'une fois.
     @State private var saved = false
     @State private var closed = false
     @State private var confirmQuit = false
@@ -64,6 +67,7 @@ struct MosquitoView: View {
         }
     }
 
+    /// Retour à la page d'accueil (une seule fois).
     private func close(_ result: MosquitoResult?) {
         guard !closed else { return }
         closed = true
@@ -77,6 +81,7 @@ struct MosquitoView: View {
         saved = true
     }
 
+    /// Quitter : confirmation pendant la partie, direct quand elle est finie ou en erreur.
     private func quit() {
         if game.phase == .over || game.errorMessage != nil {
             game.cancel()
@@ -86,9 +91,10 @@ struct MosquitoView: View {
         }
     }
 
-    // 1, 2, 3 (rangée du haut ou pavé numérique) = choisir, R = réécouter.
+    /// 1, 2, 3 (rangée du haut ou pavé numérique) = choisir, R = réécouter.
     private func installKeyMonitor() {
         let g = game
+        // Codes des touches 1, 2, 3 de la rangée du haut, puis du pavé numérique.
         let jars: [UInt16: Int] = [18: 0, 19: 1, 20: 2, 83: 0, 84: 1, 85: 2]
         keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
             if event.isARepeat { return event }
@@ -205,6 +211,7 @@ struct MosquitoView: View {
         .frame(maxHeight: .infinity)
     }
 
+    /// Aspect d'un bocal selon la phase. Pendant l'écoute, tous s'allument pareil : rien ne trahit le bon.
     private func look(for i: Int) -> JarLook {
         switch game.phase {
         case .feedback:
@@ -305,13 +312,17 @@ struct MosquitoView: View {
 
 // MARK: Bocal
 
+/// Aspect d'un bocal : pas encore écouté, en train de sonner, écouté, à choisir,
+/// moustique attrapé, moustique montré après une erreur, mauvais choix.
 enum JarLook { case pending, playing, heard, choosable, caught, revealed, wrong }
 
+/// Bocal cliquable, numéroté 1 à 3.
 private struct JarButton: View {
     let number: Int
     let look: JarLook
     var action: () -> Void
     @State private var hover = false
+    /// Incrémenté à chaque erreur : déclenche une secousse.
     @State private var shake: CGFloat = 0
 
     var body: some View {
@@ -368,6 +379,7 @@ private struct JarButton: View {
         .accessibilityLabel(Text("Bocal \(number)"))
     }
 
+    /// Survol d'un bocal qu'on peut choisir.
     private var hot: Bool { (look == .choosable || look == .heard || look == .pending) && hover }
     private var glowing: Bool { look == .playing || look == .caught || look == .revealed || look == .wrong || hot }
 
@@ -432,6 +444,7 @@ private struct JarButton: View {
     }
 }
 
+/// Vies restantes, en pastilles.
 private struct LivesView: View {
     let lives: Int
     let total: Int
@@ -506,6 +519,7 @@ private struct Shake: GeometryEffect {
     }
 }
 
+/// Classement pendant la partie (5 premiers), joueur en cours en gras.
 struct LeaderboardCard: View {
     let ranks: [MosquitoRank]
     let currentUserID: UUID?

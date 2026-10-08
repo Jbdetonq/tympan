@@ -1,6 +1,7 @@
 import Charts
 import SwiftUI
 
+/// Fiche d'un utilisateur : bandeaux de comparaison, audiogramme, évolution, sessions, jeux.
 struct UserDetailView: View {
     @Environment(DataStore.self) private var store
     let user: UserProfile
@@ -11,10 +12,13 @@ struct UserDetailView: View {
     /// Ouvre la page « Lire un audiogramme ».
     var onReadingGuide: () -> Void = {}
 
+    /// Session choisie dans la liste, nil = la plus récente.
     @State private var selectedSessionID: UUID?
+    /// Fréquence et oreille du module Évolution.
     @State private var evoFrequency = 4000
     @State private var evoEar: Ear = .right
 
+    /// Session affichée sur l'audiogramme.
     private var displayed: TestSession? {
         user.sessions.first { $0.id == selectedSessionID } ?? user.sortedSessions.first
     }
@@ -25,6 +29,7 @@ struct UserDetailView: View {
         return r
     }
 
+    /// Baisses de la session affichée par rapport à la référence (bandeaux en haut de la fiche).
     private var degradations: [Analysis.Degradation] {
         guard let s = displayed, let r = user.reference else { return [] }
         return Analysis.degradations(latest: s, reference: r)
@@ -159,6 +164,7 @@ struct UserDetailView: View {
     }
 }
 
+/// Bandeau « Baisse à signaler » (confirmée) ou « Écart à vérifier » (avec bouton pour un test Moyen).
 struct DegradationBanner: View {
     let degradation: Analysis.Degradation
     let referenceDate: Date?
@@ -209,6 +215,7 @@ struct DegradationBanner: View {
     }
 }
 
+/// Bandeau d'information neutre.
 struct InfoBanner: View {
     let text: Text
 
@@ -229,6 +236,7 @@ struct InfoBanner: View {
     }
 }
 
+/// Évolution d'une fréquence pour une oreille, sur les sessions comparables (même casque, pièce calme).
 struct EvolutionPanel: View {
     let user: UserProfile
     let headphoneID: UUID?
@@ -248,6 +256,7 @@ struct EvolutionPanel: View {
         }
     }
 
+    /// Écart du dernier test à la référence (positif = moins bien).
     private var deltaFromReference: Int? {
         guard let last = samples.last, let ref = user.reference, ref.headphoneID == headphoneID,
               let r = ref.level(ear, frequency) else { return nil }
@@ -279,6 +288,7 @@ struct EvolutionPanel: View {
                     }
                 }
                 if samples.count >= 2 {
+                    // Axe en -dB, comme l'audiogramme : une perte fait descendre la courbe.
                     Chart(samples) { s in
                         LineMark(x: .value("Date", s.date), y: .value("dB", -s.level))
                             .foregroundStyle(Theme.color(for: ear))
@@ -326,6 +336,7 @@ struct EvolutionPanel: View {
     }
 }
 
+/// Liste des sessions, de la plus récente à la plus ancienne. Clic droit : référence ou suppression.
 struct SessionsPanel: View {
     @Environment(DataStore.self) private var store
     let user: UserProfile
@@ -391,6 +402,7 @@ struct SessionsPanel: View {
         }
     }
 
+    /// Étiquette à droite de la ligne : référence, bruyante, ou indice de fiabilité.
     @ViewBuilder
     private func status(_ s: TestSession) -> some View {
         if s.id == user.referenceSessionID {
@@ -515,6 +527,7 @@ private struct MosquitoScoreCard: View {
         }
     }
 
+    /// Échelle verticale serrée autour des scores (marge de 1 kHz, au moins 2 kHz d'amplitude).
     private func yDomain(_ points: [MosquitoRecord]) -> ClosedRange<Int> {
         let values = points.compactMap(\.bestFrequency)
         let lo = max(0, (values.min() ?? 8000) - 1000)

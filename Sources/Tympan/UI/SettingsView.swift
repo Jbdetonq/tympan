@@ -11,9 +11,10 @@ final class AppActivity {
 /// Les langues proposées sont celles livrées dans l'app (dossiers xx.lproj) :
 /// ajouter une traduction ne demande aucun changement de code.
 enum LanguageChoice {
-    /// Code de langue (« fr », « en »…), "" pour suivre le système.
+    /// Choix « Suivre le système ». Les autres choix sont des codes de langue (« fr », « en »…).
     static let system = ""
 
+    /// Réglage standard de macOS, enregistré ici dans les préférences de Tympan seulement.
     private static let key = "AppleLanguages"
 
     /// Langues livrées, triées par leur nom dans leur propre langue.
@@ -38,6 +39,7 @@ enum LanguageChoice {
         return code ?? system
     }
 
+    /// Enregistre le choix ; il s'applique au prochain lancement.
     static func save(_ code: String) {
         if code == system {
             UserDefaults.standard.removeObject(forKey: key)
@@ -62,6 +64,7 @@ enum LanguageChoice {
 struct SettingsView: View {
     @Environment(AppActivity.self) private var activity
     @State private var choice = LanguageChoice.saved
+    /// Langue en vigueur : Redémarrer n'est actif que si le choix en diffère.
     private let applied = LanguageChoice.saved
 
     var body: some View {

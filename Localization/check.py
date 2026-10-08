@@ -23,11 +23,13 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 LOC = os.path.join(ROOT, "Localization")
 SOURCES = os.path.join(ROOT, "Sources")
 
+# Format placeholders accepted in keys and translations.
 SPEC = re.compile(r"%(?:\d+\$)?(?:lld|ld|d|@|lf|f|\.\d+lf|\.\d+f)")
 DASHES = ("—", "–")
 
 
 def load(path):
+    """Reads a .strings or .stringsdict file as a dict, None if it is not valid."""
     out = subprocess.run(["plutil", "-convert", "json", "-o", "-", path],
                          capture_output=True, text=True)
     if out.returncode != 0:
@@ -46,6 +48,7 @@ def normalized(key):
 
 
 def code_keys():
+    """Keys that genstrings finds in the Swift sources."""
     files = []
     for base, _, names in os.walk(SOURCES):
         files += [os.path.join(base, n) for n in names if n.endswith(".swift")]
@@ -58,6 +61,7 @@ def code_keys():
 
 
 def check(lang, keys_in_code):
+    """Checks one language folder, prints what is wrong and returns the number of errors."""
     folder = os.path.join(LOC, f"{lang}.lproj")
     problems = 0
     table = {}
@@ -72,6 +76,7 @@ def check(lang, keys_in_code):
             continue
         if name == "Localizable.strings":
             table.update(load(path) or {})
+        # Plurals: only the key matters here, the variants are checked by plutil.
         if name == "Localizable.stringsdict":
             plurals = load(path) or {}
             table.update({k: k for k in plurals})
@@ -89,6 +94,7 @@ def check(lang, keys_in_code):
             print(f"  ERROR lone percent sign (write %%): {value!r}")
             problems += 1
 
+    # fr.lproj only holds exceptions: no list of missing texts for French.
     if lang != "fr":
         known = {normalized(k) for k in table}
         missing = sorted(k for k in keys_in_code if normalized(k) not in known)

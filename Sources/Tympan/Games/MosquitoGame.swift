@@ -2,6 +2,7 @@ import CoreAudio
 import Foundation
 import Observation
 
+/// Joueur et casque choisis sur la page d'accueil du jeu.
 struct MosquitoConfig {
     var userID: UUID
     var headphone: HeadphoneProfile
@@ -12,6 +13,7 @@ struct MosquitoConfig {
 @MainActor
 @Observable
 final class MosquitoGame {
+    /// Départ, écoute des bocaux, attente du choix, réponse montrée, fin.
     enum Phase { case starting, listening, choosing, feedback, over }
 
     static let startFrequency = 8000
@@ -19,6 +21,7 @@ final class MosquitoGame {
     /// Niveau fixe et modéré (dB app) : protège les oreilles et évite toute distorsion
     /// audible qui trahirait le bon bocal.
     static let level = 60
+    /// Son continu d'une seconde par bocal, 0,4 s entre deux bocaux.
     static let toneDuration = 1.0
     static let gap = 0.4
     static let lifeCount = 3
@@ -29,6 +32,7 @@ final class MosquitoGame {
     }
 
     let config: MosquitoConfig
+    /// Identifiant de la partie : l'enregistrer deux fois ne la duplique pas.
     let recordID = UUID()
     private(set) var phase: Phase = .starting
     private(set) var round = 1
@@ -36,13 +40,18 @@ final class MosquitoGame {
     private(set) var lives = MosquitoGame.lifeCount
     /// Fréquence la plus aiguë attrapée pendant la partie.
     private(set) var best: Int?
+    /// Bocal allumé en ce moment (0 à 2), qu'il contienne le son ou non.
     private(set) var playingJar: Int?
+    /// Bocaux déjà écoutés pendant cette manche.
     private(set) var heard: Set<Int> = []
+    /// Bocal désigné par le joueur, et s'il était le bon.
     private(set) var choice: Int?
     private(set) var lastCorrect = false
+    /// 20 kHz atteint et trouvé.
     private(set) var won = false
     /// Le joueur a arrêté la partie avec « Je n'entends plus rien ».
     private(set) var gaveUp = false
+    /// La sortie audio a changé : le jeu attend Reprendre.
     private(set) var outputChanged = false
     private(set) var errorMessage: String?
     /// Bocal du moustique : n'est montré qu'après le choix.
@@ -50,15 +59,18 @@ final class MosquitoGame {
 
     private let tone = ToneGenerator()
     @ObservationIgnored private var task: Task<Void, Never>?
+    /// Réécouter demandé (R) : les trois bocaux sont rejoués.
     @ObservationIgnored private var replayRequested = false
     /// Verrou du volume ; son `hold` dit si le jeu attend (Échap, muet, autre son).
     private(set) var volumeLock: VolumeLock?
+    /// Sortie audio au début de la partie, pour repérer un changement.
     @ObservationIgnored private var device: AudioDeviceID?
 
     init(config: MosquitoConfig) {
         self.config = config
     }
 
+    /// Partie à enregistrer.
     var record: MosquitoRecord {
         MosquitoRecord(id: recordID, userID: config.userID, headphoneID: config.headphone.id,
                        bestFrequency: best, rounds: round)
@@ -66,6 +78,7 @@ final class MosquitoGame {
 
     // MARK: Commandes
 
+    /// Lance la partie (une seule fois).
     func start() {
         guard task == nil else { return }
         task = Task { await self.run() }
@@ -84,6 +97,7 @@ final class MosquitoGame {
         tone.silence()
     }
 
+    /// Réécouter les trois bocaux, sans limite, tant qu'aucun n'est choisi.
     func replay() {
         guard phase == .choosing, choice == nil else { return }
         replayRequested = true
@@ -96,6 +110,7 @@ final class MosquitoGame {
         outputChanged = false
     }
 
+    /// Partie quittée : arrêt du son et volume d'origine rendu.
     func cancel() {
         task?.cancel()
         tone.stopEngine()
@@ -104,6 +119,7 @@ final class MosquitoGame {
 
     // MARK: Déroulé
 
+    /// Manches jusqu'à la dernière vie perdue, 20 kHz, ou « Je n'entends plus rien ».
     private func run() async {
         lockVolume()
         do {
@@ -198,6 +214,7 @@ final class MosquitoGame {
         }
     }
 
+    /// Sortie changée : le jeu attend Reprendre.
     private func waitForOutput() async {
         if let current = SystemAudio.defaultOutputDevice(), current != device {
             audioLog.info("Sortie audio changée pendant le jeu")
@@ -213,6 +230,7 @@ final class MosquitoGame {
         try? await Task.sleep(for: .seconds(seconds))
     }
 
+    /// Verrouille le volume du profil sur la sortie par défaut ; Échap coupe aussi le générateur.
     private func lockVolume() {
         volumeLock?.release()
         volumeLock = nil

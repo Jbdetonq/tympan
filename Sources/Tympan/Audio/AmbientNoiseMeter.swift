@@ -4,6 +4,7 @@ import os
 /// Mesure le bruit de la pièce au micro pendant quelques secondes.
 /// Résultat en dB relatifs (dBFS + 100), non calibré : sert à comparer, pas à mesurer.
 enum AmbientNoiseMeter {
+    /// Autorisation du micro (demandée la première fois).
     static func requestAccess() async -> Bool {
         switch AVCaptureDevice.authorizationStatus(for: .audio) {
         case .authorized: return true
@@ -12,11 +13,13 @@ enum AmbientNoiseMeter {
         }
     }
 
+    /// Somme des carrés des échantillons, alimentée par le fil audio.
     private struct Accumulator {
         var sumSquares: Double = 0
         var count: Int = 0
     }
 
+    /// Niveau efficace sur `seconds` secondes, nil si le micro est refusé ou indisponible.
     static func measure(seconds: Double) async -> Double? {
         guard await requestAccess() else { return nil }
         let engine = AVAudioEngine()

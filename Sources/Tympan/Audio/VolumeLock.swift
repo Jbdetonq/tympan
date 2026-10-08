@@ -15,6 +15,7 @@ import Observation
 @MainActor
 @Observable
 final class VolumeLock {
+    /// Raison pour laquelle le test ou le jeu attend.
     enum Hold: Equatable {
         /// Son coupé : Échap (`emergency`) ou touche muet.
         case muted(emergency: Bool)
@@ -23,6 +24,7 @@ final class VolumeLock {
     }
 
     let device: AudioDeviceID
+    /// Volume du profil casque, de 0 à 1.
     let target: Float
 
     /// Raison de l'attente, nil quand le volume du test est appliqué.
@@ -33,17 +35,24 @@ final class VolumeLock {
     /// Coupe le son de l'app elle-même (appelé par Échap, en plus du muet système).
     @ObservationIgnored var onEmergency: (() -> Void)?
 
+    /// Volume et muet de l'utilisateur avant le verrou, rendus à la fin.
     @ObservationIgnored private var savedVolume: Float?
     @ObservationIgnored private var savedMute = false
+    /// Échap appuyé, en attente de Reprendre.
     @ObservationIgnored private var emergency = false
+    /// Muet ou volume à zéro posés par Échap (et non par l'utilisateur) : à annuler nous-mêmes.
     @ObservationIgnored private var mutedByUs = false
     @ObservationIgnored private var zeroedByUs = false
     /// Volume juste avant la mise à zéro d'Échap (sortie sans commande muet).
     @ObservationIgnored private var volumeBeforeZero: Float?
+    /// Vrai tant que le volume du profil est appliqué à la place de celui de l'utilisateur.
     @ObservationIgnored private var raised = false
+    /// Le volume du test a été appliqué au moins une fois (Tympan a pu jouer).
     @ObservationIgnored private var everActive = false
+    /// Apps confirmées inaudibles par « Continuer quand même ».
     @ObservationIgnored private var ignoredApps: Set<String> = []
     @ObservationIgnored private var ignoreUnnamed = false
+    /// Compteur de la surveillance : les autres sons ne sont vérifiés qu'un tour sur deux.
     @ObservationIgnored private var tick = 0
     @ObservationIgnored private var listeners: [(AudioObjectPropertyAddress, AudioObjectPropertyListenerBlock)] = []
     @ObservationIgnored private var timer: Timer?
@@ -55,6 +64,8 @@ final class VolumeLock {
 
     // MARK: Cycle de vie
 
+    /// Début du test ou de la partie : mémorise le volume de l'utilisateur, écoute les
+    /// changements de volume et de muet, puis applique le volume du profil si rien ne s'y oppose.
     func engage() {
         savedVolume = SystemAudio.volume(of: device)
         savedMute = SystemAudio.isMuted(device)
@@ -80,6 +91,7 @@ final class VolumeLock {
         }
     }
 
+    /// Fin du test ou de la partie : rend le volume et le muet de l'utilisateur.
     func release() {
         timer?.invalidate()
         timer = nil
@@ -146,6 +158,8 @@ final class VolumeLock {
 
     // MARK: Logique
 
+    /// Décide s'il faut attendre (Échap, muet, autre son) ou appliquer le volume du test.
+    /// `checkOthers` : interroger aussi Core Audio sur les autres apps (plus coûteux).
     private func evaluate(checkOthers: Bool) {
         var newHold: Hold?
         if emergency {
@@ -188,6 +202,8 @@ final class VolumeLock {
         return nil
     }
 
+    /// Impose le volume du profil. Au premier passage, le volume d'origine est enregistré
+    /// pour être rendu au lancement suivant en cas de plantage.
     private func applyTarget() {
         if !raised {
             raised = true
@@ -207,6 +223,7 @@ final class VolumeLock {
         volumeBeforeZero = nil
     }
 
+    /// Rend le volume de l'utilisateur si celui du test était appliqué.
     private func restoreUserVolume() {
         guard raised else { return }
         raised = false
@@ -215,7 +232,9 @@ final class VolumeLock {
 
     // MARK: Registre (Échap, fermeture de l'app)
 
+    /// Verrous actifs (en principe un seul à la fois).
     private static var engaged = NSHashTable<VolumeLock>.weakObjects()
+    /// Moniteur clavier d'Échap, installé tant qu'un verrou est actif.
     private static var escMonitor: Any?
     /// Dernier appui sur Échap pendant un verrou.
     private static var lastEsc: Date?
@@ -254,6 +273,7 @@ final class VolumeLock {
 
     // MARK: Plantage : volume rétabli au lancement suivant
 
+    /// Clé UserDefaults : sortie (UID), volume et muet d'origine, effacée à la fin normale.
     private static let crashKey = "tympan.volumeRestore"
 
     private static func writeCrashRecord(device: AudioDeviceID, volume: Float?, muted: Bool) {

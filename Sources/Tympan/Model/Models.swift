@@ -1,12 +1,14 @@
 import Foundation
 import SwiftUI
 
+/// Oreille testée. Droite en rouge (O), gauche en bleu (X), comme sur un audiogramme clinique.
 enum Ear: String, Codable, CaseIterable, Identifiable {
     case right, left
     var id: String { rawValue }
     var label: LocalizedStringKey { self == .right ? "Droite" : "Gauche" }
 }
 
+/// Oreilles d'un test : les deux (bips mélangés au hasard) ou une seule.
 enum EarMode: String, Codable, CaseIterable, Identifiable {
     case both, right, left
     var id: String { rawValue }
@@ -30,6 +32,7 @@ enum TestLength: String, Codable, CaseIterable, Identifiable {
     /// Fréquences communes à tous les formats.
     static let core = [500, 1000, 2000, 3000, 4000, 6000, 8000]
 
+    /// Fréquences testées (Hz), dans l'ordre croissant.
     var frequencies: [Int] {
         switch self {
         case .quick: return Self.core
@@ -73,6 +76,7 @@ enum TestLength: String, Codable, CaseIterable, Identifiable {
     /// Un test rapide ne confirme jamais une perte : il invite à refaire un test plus poussé.
     var canConfirm: Bool { self == .standard || self == .full }
 
+    /// Nom affiché du format.
     var title: LocalizedStringKey {
         switch self {
         case .quick: return "Rapide"
@@ -82,6 +86,7 @@ enum TestLength: String, Codable, CaseIterable, Identifiable {
         }
     }
 
+    /// Description courte, affichée sous le choix du format.
     var detail: LocalizedStringKey {
         switch self {
         case .quick: return "7 fréquences, précision 5 dB. Repère un écart à vérifier."
@@ -91,6 +96,7 @@ enum TestLength: String, Codable, CaseIterable, Identifiable {
         }
     }
 
+    /// Durée estimée en minutes pour 1 ou 2 oreilles (affichée dans Nouveau test, marge de 10 %).
     func estimatedMinutes(ears: Int) -> Int {
         let tracks = Double(frequencies.count * ears) + (includesRetest ? Double(ears) : 0)
         let seconds = tracks * trialsPerFrequency * TestTiming.averageTrial * 1.1 + 5
@@ -98,11 +104,14 @@ enum TestLength: String, Codable, CaseIterable, Identifiable {
     }
 }
 
+/// Rythme du test (secondes).
 enum TestTiming {
+    /// Délai aléatoire entre deux bips.
     static let minGap = 1.2
     static let maxGap = 2.8
     /// Mode enfant : délai plus court (attention courte).
     static let kidGap = 1.0...2.0
+    /// Temps laissé pour répondre après la fin du bip.
     static let responseTail = 1.0
     /// Moitié entendue (on enchaîne dès l'appui), moitié ratée (fenêtre complète).
     static var averageTrial: Double { (minGap + maxGap) / 2 + 0.5 * 0.8 + 0.5 * (0.9 + responseTail) }
@@ -113,9 +122,11 @@ struct Threshold: Codable, Hashable {
     var ear: Ear
     var frequency: Int
     var level: Int
+    /// Rien entendu jusqu'au niveau maximum (`level` vaut alors ce maximum + 5).
     var noResponse: Bool
 }
 
+/// Casque et volume système associé. Les résultats ne se comparent qu'avec le même profil.
 struct HeadphoneProfile: Codable, Identifiable, Hashable {
     var id: UUID = UUID()
     var name: String
@@ -123,21 +134,26 @@ struct HeadphoneProfile: Codable, Identifiable, Hashable {
     var volume: Float
 }
 
+/// Un test terminé : seuils mesurés et indices de fiabilité.
 struct TestSession: Codable, Identifiable, Hashable {
     var id: UUID = UUID()
     var date: Date = Date()
     var headphoneID: UUID
     var earMode: EarMode
     var thresholds: [Threshold] = []
+    /// Essais pièges (silence) et appuis sur ces pièges.
     var catchTrials: Int = 0
     var catchFalseAlarms: Int = 0
+    /// Appuis hors de toute fenêtre de réponse.
     var spuriousPresses: Int = 0
     /// Bruit ambiant mesuré (dB relatifs), nil si micro indisponible.
     var ambientLevel: Double? = nil
+    /// Pièce trop bruyante : session exclue des comparaisons.
     var noisy: Bool = false
     /// Écart max entre le 1 kHz initial et le 1 kHz refait en fin de test.
     var retestShift: Int? = nil
     var kidMode: Bool = false
+    /// Format du test, nil dans les fichiers anciens (voir `format`).
     var length: TestLength? = nil
     /// Commentaire libre et court (ex. « otite en cours », « enfant pas concentré »).
     /// Optionnel : les anciens fichiers n'ont pas ce champ.
@@ -160,6 +176,7 @@ struct TestSession: Codable, Identifiable, Hashable {
         thresholds.first { $0.ear == ear && $0.frequency == frequency }
     }
 
+    /// Seuil entendu d'une fréquence, nil si non testée ou sans réponse.
     func level(_ ear: Ear, _ frequency: Int) -> Int? {
         thresholds.first { $0.ear == ear && $0.frequency == frequency && !$0.noResponse }?.level
     }
@@ -171,11 +188,14 @@ struct TestSession: Codable, Identifiable, Hashable {
     }
 }
 
+/// Une personne suivie : ses tests et sa session de référence.
 struct UserProfile: Codable, Identifiable, Hashable {
     var id: UUID = UUID()
     var name: String
+    /// Sert seulement à l'en-tête du PDF.
     var birthYear: Int
     var sessions: [TestSession] = []
+    /// Session à laquelle les suivantes sont comparées (voir `DataStore.ensureReference`).
     var referenceSessionID: UUID? = nil
 
     var age: Int { Calendar.current.component(.year, from: Date()) - birthYear }
@@ -192,6 +212,7 @@ struct MosquitoRecord: Codable, Identifiable, Hashable {
     var headphoneID: UUID
     /// Fréquence la plus aiguë attrapée (Hz), nil si aucune manche réussie.
     var bestFrequency: Int?
+    /// Manches jouées.
     var rounds: Int
 }
 
@@ -211,6 +232,7 @@ struct PitchRecord: Codable, Identifiable, Hashable {
     var userID: UUID
     var headphoneID: UUID
     var level: PitchLevel
+    /// Son joué (imposé par le niveau depuis la v2, gardé pour les anciens fichiers).
     var timbre: TimbreChoice
     /// Étoiles gagnées sur 30.
     var stars: Int
@@ -225,12 +247,14 @@ struct PitchRecord: Codable, Identifiable, Hashable {
     }
 }
 
+/// Meilleure partie d'un joueur à un niveau, pour le classement.
 struct PitchRank: Identifiable {
     let user: UserProfile
     let record: PitchRecord
     var id: UUID { user.id }
 }
 
+/// Tout ce qui est enregistré dans le fichier JSON (et exporté).
 struct AppData: Codable {
     var users: [UserProfile] = []
     var headphones: [HeadphoneProfile] = []

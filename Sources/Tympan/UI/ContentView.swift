@@ -8,14 +8,19 @@ enum AppPage: Hashable {
     case user, addUser, newTest, kidMode, mosquito, pitch, faq, readingGuide, onboarding
 }
 
+/// Fenêtre principale : barre latérale et page à droite, ou test / partie en plein écran.
+/// Détient le test ou la partie en cours et la page affichée.
 struct ContentView: View {
     @Environment(DataStore.self) private var store
     @Environment(AppActivity.self) private var activity
     @State private var page: AppPage = Onboarding.seen ? .user : .onboarding
     @State private var onboardingStep: OnboardingStep = .welcome
     @State private var selectedUserID: UUID?
+    /// Test en cours (adulte ou enfant), nil sinon.
     @State private var runner: TestRunner?
+    /// Format proposé par un bandeau de la fiche (« Faire un test Moyen »).
     @State private var suggestedLength: TestLength?
+    /// Partie en cours, et résultat de la dernière partie montré sur la page d'accueil du jeu.
     @State private var mosquito: MosquitoGame?
     @State private var mosquitoResult: MosquitoResult?
     @State private var pitch: PitchGame?
@@ -142,10 +147,12 @@ struct ContentView: View {
         )
     }
 
+    /// Utilisateur sélectionné, nil s'il n'existe plus.
     private var selectedUser: UserProfile? {
         selectedUserID.flatMap { store.user($0) }
     }
 
+    /// Page affichée à droite de la barre latérale.
     @ViewBuilder
     private var detail: some View {
         switch shownPage {
@@ -234,6 +241,7 @@ struct ContentView: View {
         page = .onboarding
     }
 
+    /// Ouvre une page qui a besoin d'un joueur : le premier utilisateur par défaut.
     private func open(_ target: AppPage) {
         if selectedUserID == nil { selectedUserID = store.data.users.first?.id }
         page = target
@@ -250,6 +258,7 @@ struct ContentView: View {
         page = .newTest
     }
 
+    /// Fin du test : la session est enregistrée et la fiche affichée ; test quitté (nil) : rien n'est gardé.
     private func closeTest(runner: TestRunner, session: TestSession?) {
         if let session {
             store.add(session, to: runner.config.userID)
@@ -260,6 +269,7 @@ struct ContentView: View {
     }
 }
 
+/// Barre latérale : utilisateurs, exercices, aide, données ; pied avec avertissement et version.
 struct SidebarView: View {
     @Environment(DataStore.self) private var store
     @Binding var selection: UUID?
@@ -275,6 +285,7 @@ struct SidebarView: View {
     var onFAQ: () -> Void
     var onReadingGuide: () -> Void
     @State private var userToDelete: UserProfile?
+    /// Résultat du dernier export ou import, affiché dans le pied.
     @State private var message: String?
 
     var body: some View {
@@ -390,6 +401,7 @@ struct SidebarView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .background(Theme.sidebar)
+        // Menu Fichier de macOS (⌘E, ⌘I).
         .onReceive(NotificationCenter.default.publisher(for: .tympanExport)) { _ in exportData() }
         .onReceive(NotificationCenter.default.publisher(for: .tympanImport)) { _ in importData() }
         .confirmationDialog("Supprimer cet utilisateur et tout son historique ?",
@@ -437,6 +449,7 @@ struct SidebarView: View {
         }
     }
 
+    /// Entrée sans page associée (export, import) : jamais surlignée.
     private func plainItem(_ title: LocalizedStringKey, icon: String,
                            action: @escaping () -> Void) -> some View {
         Button(action: action) {
@@ -467,6 +480,7 @@ struct SidebarView: View {
         .buttonStyle(.plain)
     }
 
+    /// Enregistre toutes les données dans un fichier JSON choisi par l'utilisateur.
     private func exportData() {
         let panel = NSSavePanel()
         panel.nameFieldStringValue = "tympan-export.json"
@@ -480,6 +494,7 @@ struct SidebarView: View {
         }
     }
 
+    /// Fusionne un export (autre Mac) : rien n'est écrasé, seules les sessions et parties absentes sont ajoutées.
     private func importData() {
         let panel = NSOpenPanel()
         panel.allowedContentTypes = [.json]

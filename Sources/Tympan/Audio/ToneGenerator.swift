@@ -3,9 +3,10 @@ import os
 
 let audioLog = Logger(subsystem: "fr.jb.tympan", category: "audio")
 
-/// Génère des sons purs pulsés, sur une oreille ou les deux.
+/// Génère des sons purs, pulsés (test) ou continus (jeux), sur une oreille ou les deux.
 /// Niveau en dB relatifs à l'app : 100 dB = 0 dBFS, donc 0 dB = -100 dBFS.
 final class ToneGenerator {
+    /// Son en cours, partagé avec le fil audio (protégé par un verrou).
     struct ToneState {
         var active = false
         var frequency: Double = 1000
@@ -17,6 +18,7 @@ final class ToneGenerator {
         var phase: Double = 0
     }
 
+    // Bip du test : 3 impulsions de 200 ms toutes les 350 ms, rampes de 25 ms.
     static let pulseOn = 0.2
     static let pulsePeriod = 0.35
     static let pulseCount = 3
@@ -30,6 +32,8 @@ final class ToneGenerator {
     private var sampleRate: Double = 48_000
     private var configObserver: NSObjectProtocol?
 
+    /// Démarre le moteur (ou le relance s'il existe déjà). Le son est synthétisé échantillon
+    /// par échantillon dans le fil audio, à partir de `state`.
     func startEngine() throws {
         guard node == nil else {
             if !engine.isRunning { try engine.start() }
@@ -100,6 +104,7 @@ final class ToneGenerator {
         state.withLock { $0.active = false }
     }
 
+    /// Coupe le son et arrête le moteur (fin de test ou de partie).
     func stopEngine() {
         state.withLock { $0.active = false }
         engine.stop()
@@ -114,6 +119,7 @@ final class ToneGenerator {
         play(frequency: frequency, level: level, ear: ear, duration: Self.pulsedDuration, pulsed: true)
     }
 
+    /// Joue un son de `duration` secondes ; remplace celui en cours. Niveau plafonné à 95 dB app.
     func play(frequency: Double, level: Int, ear: Ear?, duration: Double, pulsed: Bool) {
         let amplitude = pow(10, Double(min(level, 95) - 100) / 20)
         let frames = Int(duration * sampleRate)
@@ -139,6 +145,7 @@ final class ToneGenerator {
         return 1
     }
 
+    /// Son continu : rampes de 50 ms au début et à la fin.
     static func steadyEnvelope(_ t: Double, total: Double) -> Double {
         let r = 0.05
         if t < r { return 0.5 - 0.5 * cos(Double.pi * t / r) }

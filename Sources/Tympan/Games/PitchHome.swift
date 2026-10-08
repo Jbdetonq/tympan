@@ -1,19 +1,23 @@
 import SwiftUI
 
-/// Page d'accueil de « La juste note » : description, podium par niveau (sur une portée),
-/// Jouer, réglages de la partie (le son dépend du niveau).
+/// Page d'accueil de « La juste note » : description, résultat de la dernière partie,
+/// joueur, casque et Jouer, podium par niveau (sur une portée), choix du niveau (le son en découle).
 struct PitchHomeView: View {
     @Environment(DataStore.self) private var store
+    /// Joueur = utilisateur sélectionné dans la barre latérale.
     @Binding var selection: UUID?
+    /// Partie qui vient de se terminer, nil à l'arrivée depuis le menu.
     var result: PitchResult?
     var onPlay: (PitchConfig) -> Void
     var onAddUser: () -> Void
 
+    /// Niveau choisi, gardé d'une ouverture à l'autre.
     @AppStorage("pitchLevel") private var levelRaw = PitchLevel.easy.rawValue
     @State private var headphoneID: UUID?
 
     private var level: PitchLevel { PitchLevel(rawValue: levelRaw) ?? .easy }
     private var ranks: [PitchRank] { store.pitchLeaderboard(level: level) }
+    /// Le bandeau ne concerne que le joueur qui vient de jouer.
     private var shownResult: PitchResult? { result?.userID == selection ? result : nil }
 
     var body: some View {
@@ -49,6 +53,7 @@ struct PitchHomeView: View {
         levelRaw = last.level.rawValue
     }
 
+    /// Lance une partie au niveau choisi, avec le son de ce niveau.
     private func play() {
         guard let id = selection, store.user(id) != nil, let h = store.headphone(headphoneID) else { return }
         onPlay(PitchConfig(userID: id, headphone: h, level: level, timbre: level.timbre))
@@ -74,12 +79,14 @@ struct PitchHomeView: View {
 
     // MARK: Bandeau de résultat
 
+    /// Titre du bandeau selon les étoiles (sur 30).
     private func title(_ r: PitchResult) -> LocalizedStringKey {
         if r.stars >= 25 { return "Superbe oreille !" }
         if r.stars >= 15 { return "Belle partie" }
         return "Partie terminée"
     }
 
+    /// Fin de partie : étoiles, écart moyen, tendance (trop aigu ou trop grave), record. Menthe si nouveau record.
     private func banner(_ r: PitchResult) -> some View {
         let color = r.isNewRecord ? Neon.mint : Neon.cyan
         let place = store.pitchLeaderboard(level: r.level).firstIndex { $0.user.id == r.userID }
@@ -164,6 +171,7 @@ struct PitchHomeView: View {
         .overlay(RoundedRectangle(cornerRadius: 20).strokeBorder(Neon.stageBorder))
     }
 
+    /// Record du joueur sélectionné quand il n'est pas sur le podium.
     @ViewBuilder
     private var selectedLine: some View {
         if let id = selection, let user = store.user(id) {
@@ -196,6 +204,7 @@ struct PitchHomeView: View {
         }
     }
 
+    /// Caractéristiques affichées sur la carte d'un niveau (à garder en accord avec `PitchLevel`).
     private func levelRows(_ l: PitchLevel) -> [(LocalizedStringKey, LocalizedStringKey)] {
         switch l {
         case .easy:
@@ -258,6 +267,7 @@ struct StaffPodium: View {
     /// Hauteur de la tête de note sur la portée, par place.
     private static let noteY: [CGFloat] = [52, 97, 142]
     private static let stepHeights: [CGFloat] = [72, 50, 34]
+    /// Les 5 lignes de la portée.
     private static let lineYs: [CGFloat] = (0..<5).map { 37 + CGFloat($0) * 30 }
 
     var body: some View {

@@ -6,6 +6,7 @@ import SwiftUI
 struct NewTestPage: View {
     @Environment(DataStore.self) private var store
     let user: UserProfile
+    /// Format imposé par un bandeau de la fiche ; sinon celui du dernier test.
     var suggestedLength: TestLength? = nil
     var kidMode = false
     /// Utilisateur sélectionné (le mode enfant permet d'en changer sur place).
@@ -17,11 +18,14 @@ struct NewTestPage: View {
     @State private var earMode: EarMode = .both
     @State private var length: TestLength = .standard
     @State private var headphoneID: UUID?
+    /// Formulaire de nouveau profil casque ouvert.
     @State private var creatingProfile = false
     @State private var newName = ""
     @State private var newVolume: Double = 0.5
+    /// Sortie audio active au moment d'ouvrir la page.
     @State private var deviceName = ""
     @State private var onSpeaker = false
+    /// Générateur du bip de réglage (distinct de celui du test).
     @State private var preview = ToneGenerator()
     /// État de la sortie avant le premier bip de réglage, rendu en quittant la page.
     @State private var originalVolume: Float?
@@ -217,6 +221,7 @@ struct NewTestPage: View {
         return !preview.isRunning && SystemAudio.isRunningSomewhere(d) ? [] : nil
     }
 
+    /// Coupe le bip de réglage et rend la sortie dans son état d'origine.
     private func stopPreview() {
         previewTask?.cancel()
         preview.stopEngine()
@@ -233,6 +238,7 @@ struct NewTestPage: View {
         originalMuted = false
     }
 
+    /// Carte de choix du format (Rapide, Moyen, Complet) avec sa durée estimée.
     private func lengthCard(_ l: TestLength) -> some View {
         let selected = length == l
         return Button {
@@ -263,6 +269,7 @@ struct NewTestPage: View {
         .buttonStyle(.plain)
     }
 
+    /// Carte de choix des oreilles testées.
     private func modeCard(_ mode: EarMode, title: LocalizedStringKey, detail: LocalizedStringKey) -> some View {
         let selected = earMode == mode
         return Button {
@@ -294,6 +301,7 @@ struct NewTestPage: View {
         .buttonStyle(.plain)
     }
 
+    /// Création d'un profil casque : nom et volume, réglé à l'oreille avec le bip de réglage.
     private var newProfileForm: some View {
         VStack(alignment: .leading, spacing: 12) {
             TextField("Nom du casque", text: $newName)
@@ -337,6 +345,7 @@ struct NewTestPage: View {
         .background(Theme.panelDeep, in: RoundedRectangle(cornerRadius: 10))
     }
 
+    /// Sortie audio active, alerte si c'est le haut-parleur du Mac, erreur du bip de réglage.
     @ViewBuilder
     private var deviceStatus: some View {
         if let previewError {
@@ -359,6 +368,7 @@ struct NewTestPage: View {
         }
     }
 
+    /// Valeurs de départ : sortie active, dernier casque et dernier format adulte de l'utilisateur.
     private func setup() {
         if let d = SystemAudio.defaultOutputDevice() {
             deviceName = SystemAudio.name(of: d)
@@ -374,6 +384,7 @@ struct NewTestPage: View {
     private var kidGame: Bool { kidMode }
     private var effectiveLength: TestLength { kidGame ? .kid : length }
 
+    /// Lance le test : le bip de réglage s'arrête avant.
     private func start() {
         guard let h = store.headphone(headphoneID) else { return }
         stopPreview()

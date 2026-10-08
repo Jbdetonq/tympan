@@ -1,8 +1,10 @@
 import SwiftUI
 
 /// Résumé en phrases simples sous l'audiogramme de la fiche.
+/// Lignes calculées par `Analysis.summary`.
 struct ResultSummaryView: View {
     let lines: [Analysis.SummaryLine]
+    /// Ouvre la page « Lire un audiogramme ».
     var onHelp: () -> Void
 
     var body: some View {
@@ -56,6 +58,7 @@ struct ReadingGuideView: View {
     /// Retour vers la fiche (nil si on vient de la barre latérale sans utilisateur).
     var onBack: (() -> Void)?
 
+    /// Repère numéroté sous l'exemple.
     private struct Tip: Identifiable {
         let id: Int
         let title: LocalizedStringKey
@@ -122,6 +125,7 @@ struct ReadingGuideView: View {
         }
     }
 
+    /// Audiogramme fictif, avec le sens des axes en clair (graves / aigus, sons doux / forts).
     private var example: some View {
         Panel {
             VStack(alignment: .leading, spacing: 10) {
@@ -189,6 +193,7 @@ struct ReadingGuideView: View {
 
     // MARK: Données d'exemple (fictives)
 
+    /// Session fictive : un niveau par fréquence du format Complet, pour chaque oreille.
     private static func session(_ right: [Int], _ left: [Int]) -> TestSession {
         var s = TestSession(headphoneID: UUID(), earMode: .both)
         let freqs = TestLength.full.frequencies
@@ -199,7 +204,7 @@ struct ReadingGuideView: View {
         return s
     }
 
-    // 250, 500, 1k, 2k, 3k, 4k, 6k, 8k, 10k
+    // 250, 500, 1k, 2k, 3k, 4k, 6k, 8k, 10k : aigus en légère baisse, un peu moins bons que la référence.
     private static let sample = session([15, 10, 10, 15, 20, 25, 35, 40, 50],
                                         [10, 10, 5, 10, 20, 30, 40, 45, 55])
     private static let sampleReference = session([15, 10, 10, 10, 15, 20, 25, 30, 40],

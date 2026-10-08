@@ -1,9 +1,12 @@
 import SwiftUI
 
-/// Page d'accueil de la chasse au moustique : description, podium en bocaux, réglages, Jouer.
+/// Page d'accueil de la chasse au moustique : description, résultat de la dernière partie,
+/// joueur, casque et Jouer, puis podium en bocaux.
 struct MosquitoHomeView: View {
     @Environment(DataStore.self) private var store
+    /// Joueur = utilisateur sélectionné dans la barre latérale.
     @Binding var selection: UUID?
+    /// Partie qui vient de se terminer, nil à l'arrivée depuis le menu.
     var result: MosquitoResult?
     var onPlay: (MosquitoConfig) -> Void
     var onAddUser: () -> Void
@@ -36,6 +39,7 @@ struct MosquitoHomeView: View {
         .background(Neon.bg)
     }
 
+    /// Lance une partie avec le joueur et le casque choisis.
     private func play() {
         guard let id = selection, store.user(id) != nil, let h = store.headphone(headphoneID) else { return }
         onPlay(MosquitoConfig(userID: id, headphone: h))
@@ -61,6 +65,7 @@ struct MosquitoHomeView: View {
 
     // MARK: Bandeau de résultat
 
+    /// Fin de partie : record atteint, âge des oreilles (pour s'amuser), place au podium. Menthe si nouveau record.
     private func banner(_ r: MosquitoResult) -> some View {
         let color = r.best == nil ? Neon.pink : (r.isNewRecord ? Neon.mint : Neon.pink)
         let place = ranks.firstIndex { $0.user.id == r.userID }
@@ -151,6 +156,7 @@ struct JarPodium: View {
     let ranks: [MosquitoRank]
     var highlightUserID: UUID?
 
+    /// Moustiques, largeur du bocal et hauteur de marche, du 1er au 3e.
     private static let counts = [12, 7, 3]
     private static let jarWidths: [CGFloat] = [150, 128, 118]
     private static let stepHeights: [CGFloat] = [96, 66, 44]
@@ -163,6 +169,7 @@ struct JarPodium: View {
         }
     }
 
+    /// Une place du podium (index 0 = 1er) ; vide en pointillés s'il n'y a pas assez de joueurs.
     private func slot(_ index: Int) -> some View {
         let rank = index < ranks.count ? ranks[index] : nil
         let highlighted = rank != nil && rank?.user.id == highlightUserID
@@ -250,6 +257,7 @@ struct PodiumJar: View {
     /// Position d'un moustique dans le corps du bocal (viewBox 120 x 150), avec un léger vol.
     static func position(_ k: Int, t: Double, in v: ViewBox) -> CGPoint {
         let fk = Double(k)
+        // Places de base réparties sans motif visible (pas irrationnels), puis petit vol sinusoïdal.
         let bx = 30 + (fk * 0.618 + 0.13).truncatingRemainder(dividingBy: 1) * 60
         let by = 62 + (fk * 0.382 + 0.27).truncatingRemainder(dividingBy: 1) * 62
         let dx = sin(t * (1.3 + fk * 0.17) + fk) * 5

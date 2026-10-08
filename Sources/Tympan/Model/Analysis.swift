@@ -1,5 +1,6 @@
 import Foundation
 
+/// Calculs sur les sessions : comparaisons à la référence, signaux de baisse, résumé « En clair ».
 enum Analysis {
     /// Toutes les fréquences testées (Moyen et Complet). Le Rapide n'a ni 250 Hz ni 10 kHz.
     static let frequencies = TestLength.full.frequencies
@@ -7,6 +8,7 @@ enum Analysis {
     /// Graduations de l'axe de l'audiogramme.
     static let axisFrequencies = frequencies
 
+    /// Étiquette courte pour les axes et tableaux : « 500 », « 1k », « 1,5k ».
     static func frequencyLabel(_ f: Int) -> String {
         if f < 1000 { return "\(f)" }
         return "\(Format.decimal(Double(f) / 1000))k"
@@ -19,6 +21,7 @@ enum Analysis {
             .sorted { $0.date < $1.date }
     }
 
+    /// Fréquences d'une oreille moins bien entendues que dans la référence.
     struct Degradation: Identifiable {
         let ear: Ear
         /// `noResponse` : rien entendu au niveau maximum (l'écart est alors un minimum).
@@ -82,7 +85,9 @@ enum Analysis {
 
     // MARK: Résumé en phrases simples
 
+    /// Une phrase du résumé « En clair ».
     struct SummaryLine: Identifiable {
+        /// Rassurant, neutre ou à surveiller (couleur de la puce).
         enum Tone { case ok, info, warn }
         let tone: Tone
         let text: String

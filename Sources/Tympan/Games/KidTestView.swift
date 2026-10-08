@@ -7,17 +7,22 @@ import SwiftUI
 struct KidTestView: View {
     var runner: TestRunner
     let userName: String
+    /// Session à enregistrer, ou nil si le test a été arrêté.
     var onClose: (TestSession?) -> Void
 
     /// Un seuil trouvé = un animal trouvé, dans la couleur de l'oreille (rouge droite, bleu gauche).
     enum Moment: Equatable { case found(Animal, Ear), asleep(Animal, Ear) }
+    /// Case de la collection : pas encore trouvé, trouvé, endormi.
     enum SlotStatus { case hidden, found, asleep }
 
     @State private var keyMonitor: Any?
     @State private var confirmStop = false
+    /// Animal montré en grand en ce moment, et compteur pour l'effacer au bout de 2,2 s.
     @State private var moment: Moment?
     @State private var momentToken = 0
+    /// Commentaire saisi sur l'écran de fin.
     @State private var parentNote = ""
+    /// Mesures dont l'animal a déjà été montré.
     @State private var announced: Set<String> = []
     /// Ondes affichées à chaque appui (identifiants, les plus anciennes disparaissent).
     @State private var ripples: [Int] = []
@@ -68,6 +73,7 @@ struct KidTestView: View {
         }
     }
 
+    /// Montre un animal en grand ; il s'efface seul si aucun autre n'arrive entre-temps.
     private func show(_ m: Moment) {
         moment = m
         momentToken += 1
@@ -89,6 +95,7 @@ struct KidTestView: View {
         }
     }
 
+    /// État de la case d'un animal pour une oreille.
     private func status(_ a: Animal, _ ear: Ear) -> SlotStatus {
         guard let t = runner.tracks.first(where: { $0.frequency == a.frequency && $0.ear == ear }), runner.isRevealed(t) else {
             return .hidden
@@ -98,13 +105,13 @@ struct KidTestView: View {
 
     private var ears: [Ear] { runner.config.earMode.ears }
 
-    // Espace = j'entends, P = pause.
+    /// Espace = j'entends, P = pause (comme le test adulte).
     private func installKeyMonitor() {
         let r = runner
         keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
             // Test fini : le clavier sert au commentaire (espace, P...).
             if MainActor.assumeIsolated({ r.phase == .finished }) { return event }
-            if event.keyCode == 49 {
+            if event.keyCode == 49 { // Espace ; la répétition d'une touche tenue ne compte pas.
                 if !event.isARepeat {
                     MainActor.assumeIsolated { r.respond() }
                 }
@@ -144,6 +151,7 @@ struct KidTestView: View {
         }
     }
 
+    /// Avancement de la mesure, sans chiffre ni temps restant.
     private var progressBar: some View {
         let value = runner.phase >= .measuring ? runner.measureProgress : 0
         return GeometryReader { geo in
@@ -174,6 +182,7 @@ struct KidTestView: View {
 
     // MARK: Grande zone à taper
 
+    /// Toute la zone est un bouton : clic ou tap trackpad = j'entends.
     @ViewBuilder
     private var stage: some View {
         if runner.phase == .finished {
@@ -277,6 +286,7 @@ struct KidTestView: View {
         Animal.allCases.contains { a in ears.contains { status(a, $0) == .asleep } }
     }
 
+    /// Fin du test : collection, mot pour les parents, commentaire, enregistrement.
     private var endContent: some View {
         VStack(spacing: 18) {
             HStack(spacing: 14) {
@@ -321,12 +331,14 @@ struct KidTestView: View {
         .padding(40)
     }
 
+    /// Résultat douteux : pièce bruyante, pièges mal ignorés ou appuis au hasard.
     private func needsCheck(_ s: TestSession) -> Bool {
         s.noisy || (s.reliability.map { $0 < 0.8 } ?? false) || s.spuriousPresses > 3
     }
 
     // MARK: Collection
 
+    /// Les 5 cases en bas de l'écran ; celle de l'animal qui vient d'apparaître est mise en avant.
     private var collection: some View {
         HStack(spacing: 14) {
             SectionLabel("Ma collection").frame(width: 110, alignment: .leading)
@@ -347,6 +359,7 @@ struct KidTestView: View {
         }
     }
 
+    /// Oreille de l'animal montré en grand, nil pour les autres.
     private func highlightedEar(_ a: Animal) -> Ear? {
         if case .found(let m, let ear) = moment, m == a { return ear }
         return nil
@@ -387,6 +400,7 @@ private struct AnimalPair: View {
 
 /// Ciel étoilé et vague discrète en fond de la zone de jeu.
 private struct StarField: View {
+    /// Position (fraction de la largeur et de la hauteur) et rayon de chaque étoile.
     private let stars: [(CGFloat, CGFloat, CGFloat)] = [
         (0.10, 0.14, 1.5), (0.25, 0.25, 1), (0.82, 0.16, 1.5), (0.92, 0.39, 1), (0.17, 0.75, 1),
         (0.72, 0.84, 1.5), (0.87, 0.71, 1), (0.35, 0.11, 1), (0.60, 0.07, 1.2), (0.05, 0.54, 1.2),

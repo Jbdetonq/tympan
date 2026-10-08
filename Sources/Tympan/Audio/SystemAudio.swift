@@ -2,8 +2,10 @@ import AppKit
 import CoreAudio
 import Foundation
 
-/// Accès à la sortie audio par défaut : nom, volume, haut-parleurs intégrés ou non.
+/// Accès à la sortie audio par défaut (Core Audio) : nom, volume, muet, haut-parleurs intégrés ou non,
+/// autres apps qui jouent du son.
 enum SystemAudio {
+    /// Sortie audio par défaut du Mac, nil si aucune.
     static func defaultOutputDevice() -> AudioDeviceID? {
         var id = AudioDeviceID(0)
         var size = UInt32(MemoryLayout<AudioDeviceID>.size)
@@ -15,6 +17,7 @@ enum SystemAudio {
         return status == noErr && id != 0 ? id : nil
     }
 
+    /// Nom de la sortie tel que macOS l'affiche (ex. « AirPods de JB »).
     static func name(of device: AudioDeviceID) -> String {
         var address = AudioObjectPropertyAddress(
             mSelector: kAudioObjectPropertyName,
@@ -47,8 +50,10 @@ enum SystemAudio {
             mElement: element)
     }
 
+    /// Volume général, puis canaux gauche et droit : selon la sortie, l'un ou les autres existent.
     private static let elements: [UInt32] = [kAudioObjectPropertyElementMain, 1, 2]
 
+    /// Volume de 0 à 1 : le volume général s'il existe, sinon la moyenne des canaux.
     static func volume(of device: AudioDeviceID) -> Float? {
         var values: [Float] = []
         for element in elements {
@@ -65,6 +70,7 @@ enum SystemAudio {
         return values.reduce(0, +) / Float(values.count)
     }
 
+    /// Règle le volume (borné entre 0 et 1) sur tous les éléments modifiables.
     static func setVolume(_ volume: Float, of device: AudioDeviceID) {
         var value = Float32(min(max(volume, 0), 1))
         for element in elements {
@@ -111,6 +117,7 @@ enum SystemAudio {
 
     // MARK: Identifiant stable (retrouver la sortie après un redémarrage de l'app)
 
+    /// Identifiant de la sortie, stable d'un lancement à l'autre (contrairement à AudioDeviceID).
     static func uid(of device: AudioDeviceID) -> String? {
         var address = AudioObjectPropertyAddress(
             mSelector: kAudioDevicePropertyDeviceUID,
@@ -123,6 +130,7 @@ enum SystemAudio {
         return value as String
     }
 
+    /// Retrouve la sortie à partir de son identifiant, nil si elle n'est plus branchée.
     static func device(uid: String) -> AudioDeviceID? {
         var address = AudioObjectPropertyAddress(
             mSelector: kAudioHardwarePropertyTranslateUIDToDevice,
@@ -204,6 +212,7 @@ enum SystemAudio {
         return names.sorted()
     }
 
+    /// Propriétés à surveiller pour voir tout changement de volume ou de muet.
     static func listenAddresses() -> [AudioObjectPropertyAddress] {
         elements.map { volumeAddress($0) } + [muteAddress]
     }

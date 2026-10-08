@@ -6,8 +6,10 @@ import SwiftUI
 /// Résultat d'une partie de chasse au moustique, affiché en bandeau au retour sur la page d'accueil.
 struct MosquitoResult: Equatable {
     let userID: UUID
+    /// Meilleure fréquence de la partie (Hz), et record du joueur avant la partie.
     let best: Int?
     let previousBest: Int?
+    /// 20 kHz atteint.
     let won: Bool
     /// Conseil tiré à la fin de la partie, fixe tant que le bandeau est affiché.
     var tip = HearingTips.random()
@@ -23,6 +25,7 @@ struct PitchResult: Equatable {
     let userID: UUID
     let level: PitchLevel
     let stars: Int
+    /// Écart moyen en cents, absolu et signé (positif = trop aigu).
     let meanError: Double?
     let meanBias: Double?
     let previousBest: PitchRecord?
@@ -57,6 +60,7 @@ struct GameHeadphoneField: View {
     @Environment(DataStore.self) private var store
     let userID: UUID?
     @Binding var headphoneID: UUID?
+    /// Sortie audio active, lue à l'affichage.
     @State private var deviceName = ""
     @State private var onSpeaker = false
 
@@ -149,7 +153,7 @@ struct PodiumStep: View {
     }
 }
 
-/// Bas de page d'un jeu : joueur, casque, bouton Jouer.
+/// Barre Joueur, casque et Jouer des pages d'accueil des jeux (au-dessus du podium).
 struct GamePlayBar: View {
     @Environment(DataStore.self) private var store
     @Binding var selection: UUID?
@@ -198,6 +202,7 @@ struct GamePlayBar: View {
         .overlay(RoundedRectangle(cornerRadius: 16).strokeBorder(Neon.cardBorder))
     }
 
+    /// Il faut un joueur et un profil casque.
     private var canPlay: Bool {
         selection.flatMap { store.user($0) } != nil && store.headphone(headphoneID) != nil
     }

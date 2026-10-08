@@ -5,6 +5,7 @@ enum Animal: Int, CaseIterable, Identifiable {
     case elephant, cat, rabbit, bird, mouse
     var id: Int { rawValue }
 
+    /// Fréquence testée (Hz) : les 5 fréquences du format Enfant.
     var frequency: Int {
         switch self {
         case .elephant: return 500
@@ -15,10 +16,12 @@ enum Animal: Int, CaseIterable, Identifiable {
         }
     }
 
+    /// Animal d'une fréquence, nil si aucune.
     static func forFrequency(_ f: Int?) -> Animal? {
         allCases.first { $0.frequency == f }
     }
 
+    /// Couleur propre de l'animal (page d'accueil). Pendant le test, il prend la couleur de l'oreille.
     var color: Color {
         switch self {
         case .elephant: return Neon.orange
@@ -39,6 +42,7 @@ enum Animal: Int, CaseIterable, Identifiable {
         }
     }
 
+    /// Phrases complètes (accords du genre selon la langue) : seuil trouvé, ou aucune réponse.
     var found: LocalizedStringKey {
         switch self {
         case .elephant: return "Bravo, tu as trouvé l'éléphant !"
@@ -134,8 +138,10 @@ struct AnimalDots: Shape {
     }
 }
 
+/// Animal néon : contour et yeux, gris et yeux fermés quand il dort.
 struct AnimalIcon: View {
     let animal: Animal
+    /// Couleur imposée (celle de l'oreille), sinon celle de l'animal.
     var color: Color? = nil
     var asleep = false
 

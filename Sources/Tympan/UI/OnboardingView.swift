@@ -5,6 +5,7 @@ import SwiftUI
 enum Onboarding {
     private static let key = "tympan.onboardingSeen"
 
+    /// Faux au premier lancement : le guide s'ouvre tout seul.
     static var seen: Bool { UserDefaults.standard.bool(forKey: key) }
 
     static func markSeen() {
@@ -21,6 +22,7 @@ enum SidebarZone: Hashable {
 enum OnboardingStep: Int, CaseIterable {
     case welcome, users, headphones, exercises, start
 
+    /// Zones à faire briller à cette étape.
     func highlights(hasUsers: Bool) -> Set<SidebarZone> {
         switch self {
         case .welcome: return []
@@ -45,13 +47,16 @@ extension View {
     }
 }
 
+/// Page du guide : en-tête, étape en cours, navigation (Précédent, points, Suivant).
 struct OnboardingView: View {
+    /// Étape gardée par ContentView, qui en déduit les zones à faire briller.
     @Binding var step: OnboardingStep
     var hasUsers: Bool
     var onSkip: () -> Void
     /// Dernière étape : créer un profil (aucun utilisateur) ou faire un test.
     var onFinish: () -> Void
 
+    /// Langue choisie sur la première étape ; Redémarrer n'apparaît que si elle change.
     @State private var language = LanguageChoice.saved
     private let appliedLanguage = LanguageChoice.saved
 
@@ -145,6 +150,7 @@ struct OnboardingView: View {
         }
     }
 
+    /// Étape précédente (-1) ou suivante (+1).
     private func move(_ delta: Int) {
         guard let next = OnboardingStep(rawValue: step.rawValue + delta) else { return }
         withAnimation(.easeInOut(duration: 0.2)) { step = next }
@@ -377,6 +383,7 @@ struct OnboardingView: View {
         .frame(maxHeight: .infinity)
     }
 
+    /// Titre, chapeau, puce à icône et liste numérotée : la typographie commune des étapes.
     private func title(_ text: LocalizedStringKey) -> some View {
         Text(text)
             .font(.system(size: 30, weight: .semibold))
@@ -416,6 +423,7 @@ struct OnboardingView: View {
         }
     }
 
+    /// Pastille de personne (étape Utilisateurs).
     private func avatar(_ color: Color, _ background: Color) -> some View {
         Image(systemName: "person.fill")
             .font(.system(size: 16))
@@ -424,6 +432,7 @@ struct OnboardingView: View {
             .background(background, in: Circle())
     }
 
+    /// Rappel numéroté de la dernière étape.
     private func recap(_ n: Int, _ text: LocalizedStringKey) -> some View {
         HStack(spacing: 12) {
             Text(verbatim: "\(n)")
@@ -442,6 +451,7 @@ struct OnboardingView: View {
         .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(Color(hex: 0x23262C)))
     }
 
+    /// Carte néon d'un exercice (étape Exercices).
     private func gameCard<Icon: View>(_ name: LocalizedStringKey, _ text: LocalizedStringKey,
                                       tag: LocalizedStringKey, color: Color, soft: Color,
                                       tagBackground: Color,
@@ -495,6 +505,7 @@ private struct MiniAudiogram: View {
             ctx.fill(zone, with: .color(Theme.accent.opacity(0.08)))
             ctx.stroke(zone, with: .color(Theme.accent.opacity(0.5)), style: StrokeStyle(lineWidth: 1, dash: [4, 3]))
 
+            // Ordonnées dans un repère 300 x 150 : l'oreille droite passe nettement sous la référence dans les aigus.
             let reference: [CGFloat] = [50, 50, 46, 50, 60, 68, 64]
             let left: [CGFloat] = [46, 46, 40, 48, 58, 70, 66]
             let right: [CGFloat] = [56, 50, 50, 56, 74, 92, 80]

@@ -4,6 +4,7 @@ import UniformTypeIdentifiers
 
 /// Export PDF A4 d'un audiogramme, lisible à l'impression (fond blanc).
 enum ReportExporter {
+    /// Demande où enregistrer, dessine la page en PDF puis l'ouvre.
     @MainActor
     static func export(user: UserProfile, session: TestSession, reference: TestSession?, headphone: HeadphoneProfile?) {
         let panel = NSSavePanel()
@@ -17,6 +18,7 @@ enum ReportExporter {
         let page = ReportPage(user: user, session: session, reference: reference, headphone: headphone)
             .frame(width: 595, height: 842)
             .environment(\.colorScheme, .light)
+        // Rendu vectoriel : le texte reste net et sélectionnable dans le PDF.
         let renderer = ImageRenderer(content: page)
         renderer.render { size, draw in
             var box = CGRect(origin: .zero, size: size)
@@ -30,6 +32,7 @@ enum ReportExporter {
     }
 }
 
+/// Page A4 (595 x 842 points) : en-tête, audiogramme, tableau des seuils, fiabilité, avertissement.
 private struct ReportPage: View {
     let user: UserProfile
     let session: TestSession
@@ -79,7 +82,7 @@ private struct ReportPage: View {
         .foregroundStyle(.black)
     }
 
-    /// « Test Moyen », « Mode enfant (plafond 70 dB) ».
+    /// « Test Moyen · deux oreilles », « Mode enfant (plafond 70 dB) · deux oreilles ».
     private var formatLine: String {
         let ears: String
         switch session.earMode {
@@ -108,6 +111,7 @@ private struct ReportPage: View {
         return t.noResponse ? "> \(session.format.maxLevel)" : "\(t.level)"
     }
 
+    /// Fréquences présentes dans la session (colonnes du tableau).
     private var measured: [Int] {
         Array(Set(session.thresholds.map(\.frequency))).sorted()
     }

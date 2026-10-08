@@ -1,6 +1,7 @@
 import AppKit
 import SwiftUI
 
+/// Point d'entrée : une fenêtre (barre de titre masquée, thème sombre), les menus et les Réglages.
 @main
 struct TympanApp: App {
     @NSApplicationDelegateAdaptor(TympanAppDelegate.self) private var appDelegate
@@ -20,6 +21,7 @@ struct TympanApp: App {
         }
         .windowStyle(.hiddenTitleBar)
         .windowResizability(.contentMinSize)
+        // Les menus passent par des notifications : ContentView affiche la page demandée.
         .commands {
             CommandGroup(replacing: .newItem) {
                 Button("Ajouter un utilisateur…") {

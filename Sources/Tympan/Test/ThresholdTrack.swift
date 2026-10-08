@@ -10,7 +10,9 @@ import Foundation
 ///
 /// Rapide : pas 5, 1 fois (~3,7 bips). Moyen : pas 5, 2 fois (~5,4). Complet : pas 2, 3 fois (~9).
 struct ThresholdTrack {
+    /// Niveau le plus bas présenté (dB app).
     static let minLevel = -10
+    /// Pas de montée tant que rien n'est entendu, et de descente après un premier entendu.
     static let coarseStep = 10
 
     let ear: Ear
@@ -20,11 +22,16 @@ struct ThresholdTrack {
     /// 90 dB, ou 70 dB en mode enfant.
     let maxLevel: Int
 
+    /// Prochain niveau à présenter.
     private(set) var level: Int = 35
+    /// Bips présentés (les pièges ne comptent pas).
     private(set) var trials = 0
+    /// Seuil confirmé, nil tant que la recherche continue.
     private(set) var result: Int?
+    /// Rien entendu jusqu'au niveau maximum.
     private(set) var noResponse = false
 
+    /// Nombre d'entendus et de ratés à chaque niveau présenté (la mémoire de l'encadrement).
     private var hits: [Int: Int] = [:]
     private var misses: [Int: Int] = [:]
 
@@ -36,6 +43,7 @@ struct ThresholdTrack {
         self.maxLevel = length.maxLevel
     }
 
+    /// Garde-fou : au-delà, on retient le plus bas niveau fiable.
     private var maxTrials: Int { 8 + 5 * confirmations }
 
     var isDone: Bool { result != nil || noResponse }
@@ -46,7 +54,8 @@ struct ThresholdTrack {
     /// Présentations encore probables (sert uniquement à la barre de progression).
     var estimatedRemainingTrials: Int { isDone ? 0 : max(1, 2 + 2 * confirmations - trials) }
 
-    /// Démarre près du seuil probable (déduit des fréquences voisines déjà mesurées).
+    /// Démarre près du seuil probable (déduit des fréquences voisines déjà mesurées),
+    /// jamais au-dessus de 70 dB : on ne commence pas fort.
     mutating func prime(startLevel: Int) {
         guard trials == 0 else { return }
         level = min(max(startLevel, 0), min(70, maxLevel))
@@ -57,6 +66,7 @@ struct ThresholdTrack {
         hits.keys.filter { (hits[$0] ?? 0) > (misses[$0] ?? 0) }.min()
     }
 
+    /// Enregistre la réponse au bip présenté à `level` et choisit le niveau suivant.
     mutating func record(heard: Bool) {
         guard !isDone else { return }
         trials += 1

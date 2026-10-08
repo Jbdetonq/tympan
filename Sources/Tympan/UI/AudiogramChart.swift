@@ -5,7 +5,9 @@ import SwiftUI
 /// L'axe Y trace -dB pour que les pertes descendent.
 struct AudiogramChart: View {
     var session: TestSession?
+    /// Référence tracée en pointillés, nil si aucune comparable.
     var reference: TestSession?
+    /// Couleurs sombres dans l'app, claires pour le PDF.
     var plotBackground: Color = Theme.panelDeep
     var gridColor: Color = Theme.border
     /// Épaisseur de la grille.
@@ -19,8 +21,10 @@ struct AudiogramChart: View {
         let noResponse: Bool
     }
 
+    /// Abscisse en octaves au-dessus de 250 Hz (250 Hz = 0, 8 kHz = 5).
     static func x(_ frequency: Int) -> Double { log2(Double(frequency) / 250) }
 
+    /// Points d'une session ; `tag` distingue la session de la référence.
     private func points(_ s: TestSession?, tag: String) -> [Point] {
         guard let s else { return [] }
         return s.thresholds
@@ -64,6 +68,7 @@ struct AudiogramChart: View {
                     .foregroundStyle(Theme.color(for: p.ear))
                     .lineStyle(StrokeStyle(lineWidth: 2))
             }
+            // Symboles O et X ; pâlis quand rien n'a été entendu.
             ForEach(current) { p in
                 PointMark(x: .value("Fréquence", p.x), y: .value("Seuil", p.y))
                     .symbol {

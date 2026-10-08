@@ -2,6 +2,7 @@ import SwiftUI
 
 /// Questions fréquentes : fonctionnement de l'app, choix des niveaux relatifs, références scientifiques.
 struct FAQView: View {
+    /// Questions dépliées, repérées par « section-question ».
     @State private var open: Set<String> = []
 
     var body: some View {
@@ -89,6 +90,7 @@ struct FAQView: View {
         }
     }
 
+    /// Question repliable : clic sur la question pour afficher la réponse.
     private func row(_ item: FAQItem, key: String) -> some View {
         let isOpen = open.contains(key)
         return VStack(alignment: .leading, spacing: 0) {
@@ -128,6 +130,7 @@ struct FAQView: View {
         }
     }
 
+    /// Références numérotées dans l'ordre de `FAQContent.references`.
     private var references: some View {
         VStack(alignment: .leading, spacing: 10) {
             SectionLabel("Références")
@@ -152,11 +155,13 @@ struct FAQView: View {
     }
 }
 
+/// Une question et sa réponse (Markdown : **gras**, liens).
 struct FAQItem {
     let question: LocalizedStringKey
     let answer: LocalizedStringKey
 }
 
+/// Groupe de questions sous un titre.
 struct FAQSection {
     let title: LocalizedStringKey
     let items: [FAQItem]
@@ -215,6 +220,7 @@ enum FAQContent {
         ]),
     ]
 
+    /// Les réponses citent ces références par leur numéro (« réf. 4 ») : ajouter à la fin, ne jamais réordonner.
     static let references: [LocalizedStringKey] = [
         "Carhart R., Jerger J. (1959). [Preferred method for clinical determination of pure-tone thresholds](https://pubs.asha.org/doi/10.1044/jshd.2404.330). Journal of Speech and Hearing Disorders, 24, 330-345.",
         "ISO 8253-1:2010. Acoustique, méthodes d'essais audiométriques, partie 1 : audiométrie tonale liminaire en conduction aérienne et en conduction osseuse.",

@@ -1,5 +1,6 @@
 import SwiftUI
 
+/// Palette de l'app (esthétique matériel audio sombre, accent ambre) et police des chiffres.
 enum Theme {
     static let bg = Color(hex: 0x0E0F12)
     static let sidebar = Color(hex: 0x15171B)
@@ -16,6 +17,7 @@ enum Theme {
     static let accentBg = Color(hex: 0x2A200C)
     static let accentBorder = Color(hex: 0x5C4413)
     static let onAccent = Color(hex: 0x16120A)
+    /// Oreille droite en rouge, gauche en bleu (convention des audiogrammes).
     static let right = Color(hex: 0xFF5A4E)
     static let left = Color(hex: 0x4DA3FF)
     static let ok = Color(hex: 0x3DDC84)
@@ -23,12 +25,14 @@ enum Theme {
 
     static func color(for ear: Ear) -> Color { ear == .right ? right : left }
 
+    /// SF Mono, pour les chiffres.
     static func mono(_ size: CGFloat, _ weight: Font.Weight = .regular) -> Font {
         .system(size: size, weight: weight, design: .monospaced)
     }
 }
 
 extension Color {
+    /// Couleur sRGB à partir d'un code 0xRRGGBB.
     init(hex: UInt32, opacity: Double = 1) {
         self.init(.sRGB,
                   red: Double((hex >> 16) & 0xFF) / 255,
@@ -78,6 +82,7 @@ struct Panel<Content: View>: View {
     }
 }
 
+/// Bouton principal : fond ambre.
 struct PrimaryButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
@@ -90,6 +95,7 @@ struct PrimaryButtonStyle: ButtonStyle {
     }
 }
 
+/// Bouton secondaire : contour fin, fond transparent.
 struct SecondaryButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
@@ -124,6 +130,7 @@ struct EarSymbol: View {
     }
 }
 
+/// Touche de clavier dessinée (ex. « Espace » sur le bouton J'entends).
 struct Keycap: View {
     let text: String
     var color: Color = Theme.onAccent
@@ -151,6 +158,7 @@ enum AppLocale {
     }()
 }
 
+/// Mise en forme des dates et des nombres selon la langue de l'app (`AppLocale`).
 enum Format {
     /// Date courte : 07/10/26 en français, 10/07/26 en anglais américain.
     static let day: DateFormatter = {
@@ -160,6 +168,7 @@ enum Format {
         return f
     }()
 
+    /// Date longue : « 7 oct. 2026 », « Oct 7, 2026 ».
     static let long: DateFormatter = {
         let f = DateFormatter()
         f.locale = AppLocale.current
@@ -192,6 +201,7 @@ enum Format {
         return String(localized: "\(ordinal) place")
     }
 
+    /// Durée en minutes et secondes : « 3:07 ».
     static func minutes(_ seconds: TimeInterval) -> String {
         let s = max(0, Int(seconds.rounded()))
         return String(format: "%d:%02d", s / 60, s % 60)

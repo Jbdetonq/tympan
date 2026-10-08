@@ -3,14 +3,19 @@ import SwiftUI
 /// Phrases de prévention auditive et « Le savais-tu ? », affichées sous le bandeau de fin
 /// de tous les exercices. Une phrase est tirée au hasard à chaque fin de partie.
 struct HearingTip: Equatable {
+    /// Conseil de prévention ou anecdote (« Le savais-tu ? »).
     enum Kind { case prevention, fact }
+    /// Source citée sous la phrase, avec un lien.
     enum Source: Equatable { case agiSon }
 
+    /// Texte français, qui sert aussi de clé de traduction (en.lproj). Pas de % dans les
+    /// traductions : le texte est chargé dynamiquement.
     let text: String
     let kind: Kind
     var source: Source?
 }
 
+/// Toutes les phrases, et l'« âge des oreilles » de la chasse au moustique.
 enum HearingTips {
     static let all: [HearingTip] = [
         // Prévention

@@ -2,6 +2,7 @@ import AppKit
 import SwiftUI
 
 extension PitchLevel {
+    /// Nom affiché du niveau.
     var title: LocalizedStringKey {
         switch self {
         case .easy: return "Facile"
@@ -13,6 +14,7 @@ extension PitchLevel {
 }
 
 extension Timbre {
+    /// Nom affiché du timbre.
     var title: LocalizedStringKey {
         switch self {
         case .flute: return "Flûte"
@@ -32,6 +34,7 @@ extension TimbreChoice {
         }
     }
 
+    /// Description courte du son.
     var detail: LocalizedStringKey {
         switch self {
         case .flute: return "douce et stable"
@@ -44,6 +47,8 @@ extension TimbreChoice {
 
 // MARK: Écran de jeu
 
+/// Écran de jeu de « La juste note », en plein écran : curseur de hauteur à gauche,
+/// partie en cours et classement à droite.
 struct PitchView: View {
     @Environment(DataStore.self) private var store
     var game: PitchGame
@@ -52,7 +57,9 @@ struct PitchView: View {
     var onClose: (PitchResult?) -> Void
 
     @State private var keyMonitor: Any?
+    /// Record du joueur à ce niveau avant la partie, pour savoir s'il est battu.
     @State private var previousBest: PitchRecord?
+    /// Garde-fous : la partie n'est enregistrée et l'écran fermé qu'une fois.
     @State private var saved = false
     @State private var closed = false
     @State private var confirmQuit = false
@@ -107,6 +114,7 @@ struct PitchView: View {
         }
     }
 
+    /// Retour à la page d'accueil (une seule fois).
     private func close(_ result: PitchResult?) {
         guard !closed else { return }
         closed = true
@@ -120,6 +128,7 @@ struct PitchView: View {
         saved = true
     }
 
+    /// Quitter : confirmation pendant la partie, direct quand elle est finie ou en erreur.
     private func quit() {
         if game.phase == .over || game.errorMessage != nil {
             game.cancel()
@@ -129,8 +138,8 @@ struct PitchView: View {
         }
     }
 
-    // Flèches = affiner, Espace = rejouer ma note, Entrée = valider / suivante,
-    // R = réécouter le modèle, C = comparer.
+    /// Flèches = affiner, Espace = rejouer ma note, Entrée = valider / suivante,
+    /// R = réécouter le modèle, C = comparer.
     private func installKeyMonitor() {
         let g = game
         keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
@@ -139,6 +148,7 @@ struct PitchView: View {
             let isRepeat = event.isARepeat
             let chars = event.charactersIgnoringModifiers?.lowercased() ?? ""
             let handled: Bool = MainActor.assumeIsolated { () -> Bool in
+                // Flèches gauche et droite : la répétition est permise (glisser en tenant la touche).
                 if code == 123 || code == 124 {
                     guard g.phase == .searching else { return false }
                     let step: Double = shift ? 100 : 5
@@ -147,11 +157,11 @@ struct PitchView: View {
                 }
                 if isRepeat { return false }
                 switch code {
-                case 49:
+                case 49: // Espace
                     guard g.phase == .searching else { return false }
                     g.playMine()
                     return true
-                case 36, 76:
+                case 36, 76: // Entrée (clavier principal et pavé numérique)
                     if g.phase == .searching { g.validate(); return true }
                     if g.phase == .feedback { g.next(); return true }
                     return false
@@ -235,6 +245,7 @@ struct PitchView: View {
         }
     }
 
+    /// Titre de la manche ; après validation, l'écart dit en mots.
     private var title: LocalizedStringKey {
         if game.outputChanged { return "Le casque a été débranché ?" }
         switch game.phase {
@@ -269,6 +280,7 @@ struct PitchView: View {
         }
     }
 
+    /// Curseur de hauteur ; après validation, il montre la réponse et la note révélée.
     private var ribbonPanel: some View {
         VStack(spacing: 10) {
             ribbonTop.frame(height: 56)
@@ -291,20 +303,21 @@ struct PitchView: View {
         .overlay(RoundedRectangle(cornerRadius: 16).strokeBorder(Neon.stageBorder))
     }
 
+    /// Au-dessus du curseur : nom de la note (Facile), ou la note et ton choix après validation.
     @ViewBuilder
     private var ribbonTop: some View {
         switch game.phase {
         case .searching:
             if game.config.level.showsNote {
-            HStack(alignment: .firstTextBaseline, spacing: 12) {
-                Text(verbatim: PitchMath.noteName(game.cursor))
-                    .font(.system(size: 44, weight: .semibold))
-                    .foregroundStyle(Neon.cyan)
-                    .shadow(color: Neon.cyan.opacity(0.45), radius: 10)
-                Text(verbatim: "\(Self.hz(game.cursor)) Hz")
-                    .font(Theme.mono(20))
-                    .foregroundStyle(Theme.muted)
-            }
+                HStack(alignment: .firstTextBaseline, spacing: 12) {
+                    Text(verbatim: PitchMath.noteName(game.cursor))
+                        .font(.system(size: 44, weight: .semibold))
+                        .foregroundStyle(Neon.cyan)
+                        .shadow(color: Neon.cyan.opacity(0.45), radius: 10)
+                    Text(verbatim: "\(Self.hz(game.cursor)) Hz")
+                        .font(Theme.mono(20))
+                        .foregroundStyle(Theme.muted)
+                }
             }
         case .feedback:
             if let r = game.results.last {
@@ -340,6 +353,7 @@ struct PitchView: View {
         }
     }
 
+    /// Sous le curseur : aide clavier pendant la recherche, étoiles et écart après validation.
     @ViewBuilder
     private var ribbonBottom: some View {
         switch game.phase {
@@ -361,6 +375,7 @@ struct PitchView: View {
         }
     }
 
+    /// Manches jouées, puis les boutons de la phase en cours.
     private var footer: some View {
         HStack(spacing: 16) {
             RoundDots(results: game.results,
@@ -421,6 +436,7 @@ struct PitchView: View {
 
     // MARK: Fin de partie
 
+    /// Partie complète qui bat le record du joueur à ce niveau (ou premier record).
     private var isNewRecord: Bool {
         guard let r = game.record else { return false }
         return previousBest.map { r.beats($0) } ?? true
@@ -501,15 +517,18 @@ struct PitchView: View {
 
     // MARK: Formats
 
+    /// Fréquence arrondie d'une hauteur MIDI : « 440 ».
     static func hz(_ midi: Double) -> String {
         Format.hz(Int(PitchMath.frequency(midi).rounded()))
     }
 
+    /// Écart signé : « +12 cents », « -8 cents ».
     static func signedCents(_ c: Double) -> String {
         let v = Int(c.rounded())
         return v > 0 ? "+\(v) cents" : "\(v) cents"
     }
 
+    /// Écart en mots : en cents sous le demi-ton, en demi-tons au-delà.
     static func describe(_ cents: Double) -> LocalizedStringKey {
         let e = abs(cents)
         let up = cents > 0
@@ -537,18 +556,26 @@ extension PitchLevel {
 // MARK: Curseur de hauteur
 
 /// Ruban horizontal : échelle en demi-tons (logarithmique en Hz), comme un clavier.
+/// Tracé dans un Canvas (hauteurs en dur, cadre de 150 points).
 struct PitchRibbon: View {
+    /// Étendue affichée et position du curseur (hauteurs MIDI).
     let window: ClosedRange<Double>
     let cursor: Double
+    /// Note révélée après validation, nil avant.
     var target: Double?
+    /// Noms des notes sous les graduations (Facile).
     var showsLabels: Bool
     var interactive: Bool
+    /// Le curseur sonne : petites ondes au-dessus.
     var sounding: Bool
+    /// Écart affiché au-dessus du curseur après validation.
     var cursorLabel: String?
+    /// Pendant « Comparer » : 0 = la note brille, 1 = le curseur.
     var highlight: Int?
     var onDrag: (Double) -> Void
     var onEnd: () -> Void
 
+    /// Marge horizontale : le curseur reste attrapable aux extrémités.
     let pad: CGFloat = 20
 
     var body: some View {
@@ -572,6 +599,7 @@ struct PitchRibbon: View {
 
     private var span: Double { max(1, window.upperBound - window.lowerBound) }
 
+    /// Hauteur MIDI sous l'abscisse `x`, bornée à la fenêtre.
     private func value(at x: CGFloat, width: CGFloat) -> Double {
         let w = max(1, width - 2 * pad)
         let frac = min(max(Double((x - pad) / w), 0), 1)
@@ -663,6 +691,7 @@ struct PitchRibbon: View {
 
 // MARK: Petits éléments
 
+/// Pastille de l'en-tête : niveau (allumée) et timbre.
 private struct PitchChip: View {
     let text: LocalizedStringKey
     let on: Bool
@@ -677,6 +706,7 @@ private struct PitchChip: View {
     }
 }
 
+/// Trois étoiles, `filled` pleines.
 struct StarsView: View {
     let filled: Int
     var size: CGFloat = 12
@@ -696,6 +726,7 @@ struct StarsView: View {
     }
 }
 
+/// Ligne du barème des étoiles.
 private struct StarScaleRow: View {
     let stars: Int
     let text: LocalizedStringKey
@@ -708,6 +739,7 @@ private struct StarScaleRow: View {
     }
 }
 
+/// Une barrette par manche, avec ses étoiles une fois jouée.
 private struct RoundDots: View {
     let results: [PitchRound]
     /// Manche en cours (index), nil pendant le résultat.
@@ -740,6 +772,7 @@ private struct RoundDots: View {
     }
 }
 
+/// Étapes de la manche : Écoute, Silence (Difficile), Cherche.
 private struct PhaseSteps: View {
     let level: PitchLevel
     let phase: PitchGame.Phase
@@ -787,6 +820,7 @@ private struct PhaseSteps: View {
     }
 }
 
+/// Classement du niveau pendant la partie (5 premiers), joueur en cours en gras.
 struct PitchLeaderboardCard: View {
     let level: PitchLevel
     let ranks: [PitchRank]

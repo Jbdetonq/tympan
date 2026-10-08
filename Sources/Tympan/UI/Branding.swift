@@ -34,6 +34,7 @@ struct TympanLogo: View {
         .accessibilityHidden(true)
     }
 
+    /// AppIcon.icns du bundle, nil hors bundle (lancement depuis Xcode).
     static let bundleImage: NSImage? = {
         if let url = Bundle.main.url(forResource: "AppIcon", withExtension: "icns") {
             return NSImage(contentsOf: url)
@@ -81,6 +82,7 @@ struct TympanLogoShape: View {
     }
 }
 
+/// Commandes des menus macOS, transmises à ContentView qui affiche la page correspondante.
 extension Notification.Name {
     static let tympanAddUser = Notification.Name("tympan.addUser")
     static let tympanExport = Notification.Name("tympan.export")
@@ -97,12 +99,13 @@ enum AppLinks {
     static let privacy = URL(string: "https://github.com/Jbdetonq/tympan/blob/main/PRIVACY.md")!
 }
 
-/// Force l'icône du Dock au lancement (macOS garde parfois l'ancienne en cache).
+/// Délégué de l'app : volume rendu après un plantage ou à Cmd+Q, icône du Dock, fermeture de la fenêtre.
 @MainActor
 final class TympanAppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Arrêt inattendu pendant un test (plantage, arrêt forcé) : on rend le volume d'avant.
         VolumeLock.recoverAfterCrash()
+        // Icône du Dock forcée : macOS garde parfois l'ancienne en cache.
         if let image = TympanLogo.bundleImage {
             NSApp.applicationIconImage = image
         }

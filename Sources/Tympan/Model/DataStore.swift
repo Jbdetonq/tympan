@@ -1,10 +1,12 @@
 import Foundation
 import Observation
 
-/// Stockage local : un fichier JSON dans ~/Library/Application Support/Tympan.
+/// Stockage local : un fichier JSON dans Application Support/Tympan (dans le conteneur du sandbox).
+/// Chaque modification est enregistrée aussitôt.
 @Observable
 final class DataStore {
     var data = AppData()
+    /// Dernière erreur de lecture ou d'enregistrement, affichée dans le pied de la barre latérale.
     var lastError: String?
 
     private let fileURL: URL
@@ -32,6 +34,7 @@ final class DataStore {
 
     // MARK: Fichier
 
+    /// Lit le fichier au lancement. Pas de fichier : premier lancement, données vides.
     func load() {
         guard let raw = try? Data(contentsOf: fileURL) else { return }
         do {
@@ -45,6 +48,7 @@ final class DataStore {
         }
     }
 
+    /// Écrit tout le fichier (écriture atomique : jamais de fichier à moitié écrit).
     func save() {
         do {
             try Self.makeEncoder().encode(data).write(to: fileURL, options: .atomic)
@@ -67,6 +71,7 @@ final class DataStore {
         return user.id
     }
 
+    /// Supprime l'utilisateur, ses sessions et ses parties.
     func deleteUser(_ id: UUID) {
         data.users.removeAll { $0.id == id }
         data.mosquitoGames?.removeAll { $0.userID == id }
@@ -91,6 +96,7 @@ final class DataStore {
 
     // MARK: Sessions
 
+    /// Enregistre un test terminé ; il devient la référence s'il n'y en a pas encore.
     func add(_ session: TestSession, to userID: UUID) {
         guard let i = data.users.firstIndex(where: { $0.id == userID }) else { return }
         data.users[i].sessions.append(session)
@@ -114,6 +120,7 @@ final class DataStore {
         save()
     }
 
+    /// Modifie le commentaire d'une session (vide = supprimé).
     func setNote(_ text: String, session sessionID: UUID, of userID: UUID) {
         guard let i = data.users.firstIndex(where: { $0.id == userID }),
               let j = data.users[i].sessions.firstIndex(where: { $0.id == sessionID }) else { return }
@@ -123,6 +130,7 @@ final class DataStore {
         save()
     }
 
+    /// Supprime une session ; si c'était la référence, une autre est choisie automatiquement.
     func deleteSession(_ sessionID: UUID, of userID: UUID) {
         guard let i = data.users.firstIndex(where: { $0.id == userID }) else { return }
         data.users[i].sessions.removeAll { $0.id == sessionID }
@@ -145,6 +153,7 @@ final class DataStore {
         save()
     }
 
+    /// Fréquence la plus aiguë attrapée par un joueur, toutes parties confondues.
     func mosquitoBest(for userID: UUID) -> Int? {
         mosquitoGames.filter { $0.userID == userID }.compactMap(\.bestFrequency).max()
     }
@@ -179,6 +188,7 @@ final class DataStore {
         save()
     }
 
+    /// Meilleure partie d'un joueur à un niveau (voir `PitchRecord.beats`).
     func pitchBest(for userID: UUID, level: PitchLevel) -> PitchRecord? {
         pitchGames
             .filter { $0.userID == userID && $0.level == level }
@@ -202,6 +212,7 @@ final class DataStore {
 
     // MARK: Export / import
 
+    /// Écrit toutes les données dans le fichier choisi (même format que le fichier interne).
     func export(to url: URL) throws {
         try Self.makeEncoder().encode(data).write(to: url, options: .atomic)
     }
@@ -261,6 +272,7 @@ final class DataStore {
 
     /// Taille maximale d'un fichier importé (un export réel pèse quelques dizaines de Ko).
     static let importLimit = 20 * 1024 * 1024
+    /// Longueur maximale d'un prénom ou d'un nom de casque.
     static let nameLimit = 60
 
     private static func cleanName(_ name: String) -> String {

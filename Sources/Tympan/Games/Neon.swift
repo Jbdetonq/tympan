@@ -2,11 +2,13 @@ import SwiftUI
 
 /// Univers des jeux : même fond sombre, dessins au néon façon écran de console.
 enum Neon {
+    // Fonds et cadres, plus sombres que ceux de Theme.
     static let bg = Color(hex: 0x0A0B0E)
     static let stage = Color(hex: 0x0D0F13)
     static let stageBorder = Color(hex: 0x1A1D23)
     static let card = Color(hex: 0x111317)
     static let cardBorder = Color(hex: 0x1F2228)
+    // Couleur de chaque jeu : menthe (mode enfant), rose (moustique), cyan (juste note).
     static let mint = Color(hex: 0x3DFFB0)
     static let mintBg = Color(hex: 0x0F1A17)
     static let pink = Color(hex: 0xFF4FD8)
@@ -15,9 +17,11 @@ enum Neon {
     static let cyan = Color(hex: 0x3DE0FF)
     static let cyanSoft = Color(hex: 0x8AEEFF)
     static let cyanBg = Color(hex: 0x0C1417)
+    // Curseur de hauteur et clavier de « La juste note ».
     static let well = Color(hex: 0x0A0C10)
     static let track = Color(hex: 0x15181D)
     static let blackKey = Color(hex: 0x262930)
+    // Étoiles et 1re place, vies, états éteints, textes.
     static let yellow = Color(hex: 0xFFE14D)
     static let orange = Color(hex: 0xFF9A3D)
     static let red = Color(hex: 0xFF3B4A)
@@ -40,6 +44,7 @@ extension View {
 
 /// Dessin à partir de coordonnées de maquette (viewBox SVG), mis à l'échelle du cadre.
 struct ViewBox {
+    /// Échelle, et décalage pour centrer le dessin dans le cadre.
     let s: CGFloat
     let ox: CGFloat
     let oy: CGFloat
@@ -50,10 +55,12 @@ struct ViewBox {
         oy = rect.minY + (rect.height - height * s) / 2
     }
 
+    /// Point de la maquette, en coordonnées du cadre.
     func p(_ x: CGFloat, _ y: CGFloat) -> CGPoint {
         CGPoint(x: ox + x * s, y: oy + y * s)
     }
 
+    /// Rectangle de la maquette, en coordonnées du cadre.
     func r(_ x: CGFloat, _ y: CGFloat, _ w: CGFloat, _ h: CGFloat) -> CGRect {
         CGRect(x: ox + x * s, y: oy + y * s, width: w * s, height: h * s)
     }
@@ -116,6 +123,7 @@ struct MosquitoBody: Shape {
     }
 }
 
+/// Tête seule, remplie en plein dans l'icône.
 struct MosquitoHead: Shape {
     func path(in rect: CGRect) -> Path {
         let v = ViewBox(rect, width: 200, height: 120)
@@ -136,6 +144,7 @@ struct MosquitoLegs: Shape {
     }
 }
 
+/// Moustique néon complet : corps translucide, tête pleine, contours, pattes.
 struct MosquitoIcon: View {
     var color: Color = Neon.pink
 
@@ -199,6 +208,7 @@ struct TuningForkShape: Shape {
     }
 }
 
+/// Petites ondes de part et d'autre du diapason.
 struct TuningForkWaves: Shape {
     func path(in rect: CGRect) -> Path {
         let v = ViewBox(rect, width: 40, height: 40)
@@ -209,6 +219,7 @@ struct TuningForkWaves: Shape {
     }
 }
 
+/// Diapason néon avec ses ondes.
 struct TuningForkIcon: View {
     var color: Color = Neon.cyan
 
